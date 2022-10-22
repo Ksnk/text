@@ -213,6 +213,28 @@ class tpl {
     }
 
     /**
+     * @param $n
+     * @param $one
+     * @param $two
+     * @param $five
+     * @return mixed
+     * @example ~(11,'копейка','копейки','копеек');
+     */
+    function plural($n,$one, $two, $five){
+        if (is_array($n))
+            $n = count($n);
+        $n = $n % 100;
+        if ($n > 4 && $n < 21)
+            return $five;
+        $n = $n % 10;
+        if ($n == 1)
+            return $one;
+        if ($n < 5 && $n > 1)
+            return $two;
+        return $five;
+    }
+
+    /**
      * Шаблоны с минимальной логикий
      * @param $sql
      * @param $param
@@ -244,13 +266,7 @@ class tpl {
                         $x = explode('|', $w[4]);
                         if (count($x) == 4) { // pluralform
                             if ('' !== $w[3] && isset($data)) $last = $data;
-                            $n = (int)$last;
-                            $n = $n % 100;
-                            if ($n < 20 && $n > 9) return $x[3];
-                            $n = $n % 10;
-                            if ($n == 1) return $x[1];
-                            if ($n < 5 && $n > 1) return $x[2];
-                            return $x[3];
+                            return $this->plural((int)$last,$x[1],$x[2],$x[3]);
                         }
                     }
                     if($w[4]=='|t'){ // модификатор - время
@@ -330,6 +346,7 @@ class tpl {
         'text' => '_',
         'sql' => '_',
         'prop' =>'num2str',
+        'plural' =>'plural',
     ];
 
     /**
