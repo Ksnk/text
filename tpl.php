@@ -347,6 +347,7 @@ class tpl {
         'sql' => '_',
         'prop' =>'num2str',
         'pl' =>'plural',
+        'rusd' =>'toRusDate'
     ];
 
     /**
