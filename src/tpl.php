@@ -379,6 +379,11 @@ class tpl {
                             $db = \Ksnk\project\core\ENGINE::db();
                             return '"'.$db->escape($n).'"';
                         };
+                    } else {
+                        self::$quote = function ($n) {
+                            $db = \Ksnk\project\core\ENGINE::db();
+                            return "'".escapeshellarg($n)."'";
+                        };
                     }
                 }
                 $parameters[3]=self::$quote;
