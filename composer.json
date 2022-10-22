@@ -12,6 +12,11 @@
       "homepage": "https://github.com/ksnk"
     }
   ],
+  "autoload": {
+    "psr-4": {
+      "Ksnk\\text\\": "/"
+    }
+  },
   "require": {
     "php": ">=5.6"
   },
