@@ -346,7 +346,7 @@ class tpl {
         'text' => '_',
         'sql' => '_',
         'prop' =>'num2str',
-        'plural' =>'plural',
+        'pl' =>'plural',
     ];
 
     /**
