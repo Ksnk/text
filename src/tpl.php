@@ -10,22 +10,6 @@ class tpl {
     var $hang, $dec, $numbf, $numb, $thau;
 
     /**
-     * singleton-like самоинициализирующийся инстанс
-     *
-     * @return Model_prop
-     * @internal
-     */
-    static function &instance()
-    {
-        static $me;
-        if (!isset($me)) {
-            $me = new self();
-            $me->_prop();
-        }
-        return $me;
-    }
-
-    /**
      * инициализация необходимых запчастей для прописи
      *
      * @return prop
@@ -255,10 +239,13 @@ class tpl {
         $placeholders=[];$cnt=0;$last=0;
         if(is_array($param))$param=(object)$param;
         // этап 1 - заменяем шаблоны - вставки на плейсхолдеры
-        if($type=='text'){ // игнорируем quote
+        if($type=='text' || $type=='utext'){ // игнорируем quote
             $gimmireplace=function ($w) use ($type, $param, &$last) {
 
-                if (property_exists($param,$w[3])) $data=$param->{$w[3]}; else $data='';
+                if (property_exists($param,$w[3])) $data=$param->{$w[3]}; else {
+                    $w[2]='';
+                    $data='';
+                }
                 if (is_array($data) || is_object($data))
                     return $w[1] .$w[2] . json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
                 else {
@@ -304,15 +291,19 @@ class tpl {
                 return  $w[1] . $quote('');
             };
         }
+        if($type!='utext')
+            $reg=['/(=)?{(\s*)(\w*)\s*(\|[\|\w]*)?}/u','/{\s*(\w+)\s*\?([^}:]+)(?:\:([^}]+))?\s*}/'];
+        else
+            $reg=['/(=)?{{(\s*)(\w*)\s*(\|[\|\w]*)?}}/u','/{{\s*(\w+)\s*\?([^}:]+)(?:\:([^}]+))?\s*+}}/'];
         $sql = preg_replace_callback(
-            '/(=)?{(\s*)(\w*)\s*(\|[\|\w]*)?}/u',function ($w) use ( &$placeholders, &$cnt,&$gimmireplace) {
+            $reg[0],function ($w) use ( &$placeholders, &$cnt,&$gimmireplace) {
             if(empty($w[4]))$w[4]=''; // force to create
             $placeholders[]=$gimmireplace($w);
             return '@@'.($cnt++).'@@';
         } , $sql);
         // этап 2 - заменяем логику
         $sql = preg_replace_callback(
-            '/{\s*(\w+)\s*\?([^}:]+)(?:\:([^}]+))?\s*}/',
+            $reg[1],
             function ($w) use ( $param) {
                 if (!property_exists($param,$w[1])) {
                     return '';
@@ -345,6 +336,7 @@ class tpl {
     private static $methods = [
         'text' => '_',
         'sql' => '_',
+        'utext'=> '_',
         'prop' =>'num2str',
         'pl' =>'plural',
         'rusd' =>'toRusDate'
@@ -360,11 +352,17 @@ class tpl {
         if (!array_key_exists($method, self::$methods)) {
             throw new \Exception('The ' . $method . ' is not supported.');
         }
-        $me = self::instance();
+        static $me;
+        if (!isset($me)) {
+            $me = new self();
+            $me->_prop();
+        }
 
         // корректируем парамеры по умолчанию
         if($method=='text'){
             $parameters[2]='text';
+        } elseif($method=='utext'){
+            $parameters[2]='utext';
         } elseif($method=='sql'){
             if(empty($parameters[2])){
                 $parameters[2]='select';
