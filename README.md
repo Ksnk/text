@@ -1,0 +1,1 @@
+# just a simple class to hold some text functions
