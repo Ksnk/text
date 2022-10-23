@@ -107,6 +107,9 @@ class tpl {
     function num2str($LL, $valute = FALSE, $kop = FALSE)
     {
 
+        if(!empty($valute) && is_string($valute)){
+            $valute=call_user_func_array([$this,'prep'],explode(';',$valute));
+        }
         if (!$valute) $valute = $this->prep();
 
         $mm = explode('.', str_replace(',', '.', $LL), 2);
