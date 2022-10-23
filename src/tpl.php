@@ -3,6 +3,14 @@ namespace Ksnk\text;
 
 //use Ksnk\project\core\ENGINE;
 
+/**
+ * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с копейками или без
+ * @method static string text($template, $data) - текстовая замена, одинарные фигурные скобки
+ * @method static string utext($template, $data) - текстовая замена, двойные фигурные скобки
+ * @method static string sql($template, $data) - подготовленое выражение sql.
+ * @method static string pl($n,$one, $two, $five) - окончание числительных (plural form).
+ * @method static string rusd($daystr = null, $format = "j F, Y г.") - дата с месяцами - днями недели по русски.
+ */
 class tpl {
 
     protected static $quote=null;
