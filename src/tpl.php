@@ -306,13 +306,16 @@ class tpl {
                         return $eq . $this->plural((int)$last, $x[1], $x[2], $x[3]);
                     }
                 }
-                if ($mod == '|d') { // модификатор - время
+                if ($x[1] == 'd') { // модификатор - время
+                    array_shift($x);array_shift($x);$f=join('|',$x);
                     if (($x = strtotime($data)) > 0) $data = $x;
+                    if(!empty($f))
+                        return $eq . $spaces . self::toRusDate($data, $f);
                     if (date('Y') == date('Y', $data)) {
                         return $eq . $spaces . self::toRusDate($data, 'j F');
                     } else
                         return $eq . $spaces . self::toRusDate($data, 'j F Y г');
-                } elseif ($mod == '|t') { // модификатор - время
+                } elseif ($x[1] == 't') { // модификатор - время
                     if (!!$quote) {
                         if (ctype_digit($data))
                             return $eq . $spaces . $quote(date("Y-m-d H:i:s", $data));
