@@ -29,7 +29,7 @@ class allInOneTest extends TestCase
             throw new Exception('wrong parameters');
         }
     }
-
+/*
     function test_incorrect2(){
         $this->expectExceptionMessage('unclosed tag');
         $this->assertEquals(
@@ -38,6 +38,7 @@ class allInOneTest extends TestCase
                 ['code' => 'коде','prop' => 'установлено'])
         );
     }
+*/
     function test_incorrect(){
         $this->expectExceptionMessage('unclosed tag');
         tpl::text('выводим {prop',
