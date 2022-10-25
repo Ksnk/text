@@ -254,7 +254,7 @@ class tpl {
      * @return string|string[]|null
      * @example
      * {{Email}}
-     * {{Name|уважаемый подписчик}}
+     * Добрый день, {{Name?:уважаемый подписчик}} - ДОбрый день, Олег|Добрый день, уважаемый подписчик
      * {{Name|{{Email}}}}
      * {{Name?Dear Username}}
      * {{HasOrders?{{Discount}}}}

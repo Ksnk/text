@@ -165,6 +165,10 @@ class allInOneTest extends TestCase
         $appendstr[]='text={text}';
         $appendstr[]='data={data}';
 
+        echo tpl::rusd(time()).PHP_EOL;
+        setlocale(LC_ALL, 'ru_RU', 'ru_RU.UTF-8', 'ru', 'russian');
+        echo iconv('cp1251','UTF-8',strftime("%B %d, %Y", time())).PHP_EOL;
+
         $this->assertEquals(
             'insert into table_sclad set  created=NOW(), user_email = "my@email.com", user= NULL,text="just a some text",data="[1,2,3,4,5]"',
             tpl::sql('insert into table_sclad set  created=NOW(), user_email = {own}, ' . implode(',', $appendstr),
