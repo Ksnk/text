@@ -2,6 +2,7 @@
 namespace Ksnk\text;
 
 //use Ksnk\project\core\ENGINE;
+use \Exception;
 
 /**
  * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с копейками или без
@@ -19,12 +20,10 @@ class tpl {
 
     const RUB="рубл|ь|я|ей;+копе|йка|йки|ек";
 
-    private $tags=[];
+    private $tags=[], $lastlex=[];
 
     /**
      * инициализация необходимых запчастей для прописи
-     *
-     * @return prop
      */
     private function _prop()
     {
@@ -233,10 +232,15 @@ class tpl {
         return $five;
     }
 
-    private function a2reg($a){
+    private function a2reg(&$a){
         $r=[];
+        uksort($a,function($a,$b){
+            if(strlen($a)>strlen($b)) return -1;
+            if(strlen($a)==strlen($b)) return 0;
+            return 1;
+        });
         foreach($a as $k=>$v) {
-            $r=preg_quote($k);
+            $r[]=preg_quote($k);
         }
         return '('.implode(')|(',$r).')';
     }
@@ -263,21 +267,22 @@ class tpl {
 
         $eatnext=function($lexems)use(&$sql,&$getopen,&$getnext,&$param,&$last,$quote,$type){
             $lex=[];
-            if(!empty($lex)) return array_shift($lex);
-            if(empty($sql)) return $lex[]=['','EOF'];
-            if(preg_match('~^(\s*)(.*?)(?:'.$this->a2reg($lexems).'(.*)$~us',$sql,$m)){
+            $lexems['\\']='escaped';$lexems['\{']='escaped';$lexems['\}']='escaped';$lexems['\?']='escaped';$lexems['\:']='escaped';
+            if(empty($sql)) return [['','EOF']];
+            if(preg_match('~^(\s*)(.*?)(?:'.$this->a2reg($lexems).')(.*)$~us',$sql,$m)){
                 if(''!=$m[1]){
                     $lex[]=[$m[1],'spaces'];
                 }
                 if(''!=$m[2]){
                     $lex[]=[$m[2],'plain'];
                 }
-                $idx=1;
+                $idx=2;
                 foreach($lexems as $k=>$v){
-                    if(!empty($m[$idx])){
+                    if(!empty($m[++$idx])){
                         $lex[]=[$m[$idx],$v];
                     }
                 }
+                $sql=$m[$idx+1];
             } else {
                 $lex[]=[$sql,'plain'];
                 $sql='';
@@ -285,123 +290,127 @@ class tpl {
             return $lex;
         };
 
+        $repl=function($eq,$spaces,$data,$quote,$mod='')use(&$last){
+            // замена
+            if (is_array($data) || is_object($data)) {
+                if (!!$quote) {
+                    return $eq . $spaces . $quote(json_encode($data, JSON_UNESCAPED_UNICODE));
+                } else {
+                    return $eq . $spaces . json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
+                }
+            } else {
+                if (!empty($mod)) {
+                    $x = explode('|', $mod);
+                    if (count($x) == 4) { // pluralform
+                        if ('' !== $spaces && isset($data)) $last = $data;
+                        return $eq . $this->plural((int)$last, $x[1], $x[2], $x[3]);
+                    }
+                }
+                if ($mod == '|d') { // модификатор - время
+                    if (($x = strtotime($data)) > 0) $data = $x;
+                    if (date('Y') == date('Y', $data)) {
+                        return $eq . $spaces . self::toRusDate($data, 'j F');
+                    } else
+                        return $eq . $spaces . self::toRusDate($data, 'j F Y г');
+                } elseif ($mod == '|t') { // модификатор - время
+                    if (!!$quote) {
+                        if (ctype_digit($data))
+                            return $eq . $spaces . $quote(date("Y-m-d H:i:s", $data));
+                        return $eq . $spaces . $quote(date('Y-m-d H:i:s', strtotime($data)));
+                    } else {
+                        return $eq . $spaces . self::toRusDate($data, 'j F Y г. в H:i');
+                    }
+                } elseif ($mod == '|l' && !!$quote) {
+                    return $eq . $spaces . '"%' . addCslashes($data, '"\%_') . '%"';
+                } elseif (is_null($data) || '' == $data) {
+                    if (!!$quote) {
+                        if (is_null($data)) {
+                            if ($eq == '=') {
+                                return ' IS NULL';
+                            }
+                            return $eq . 'NULL';
+                        }
+                        return $eq . $quote($data);
+                    }
+                    $last = 0;
+                    return '';
+                } else {
+                    $last = (int)$data;
+                    if (!!$quote) {
+                        return $eq . $spaces . $quote($data);
+                    } else
+                        return $eq . $spaces . $data;
+                }
+            }
+        };
 
         // лексемы
-        $lex=[];$last='';
-        $getopen=function($eq='')use(&$eatnext,&$getopen,&$param,&$last,$quote,$type){
+        $last='';
+        $getopen=function($eq='')use(&$eatnext,&$getopen,&$getplain,&$param,&$last,$quote,$type,$repl){
             // первый элемент либо условие, либо замена
-            $x=['\}'=>'escaped','\?'=>'escaped','\|'=>'escaped',
-                '?:'=>'default','?'=>'cond','|'=>'mod']; $x[$this->tags[1]]='close';
+            $x=['?'=>'cond','|'=>'mod']; $x[$this->tags[1]]='close';
             $lex=$eatnext($x);
-            if(count($lex)==0) throw new \Exception('wtf?');
+            if(count($lex)==0) throw new Exception('wtf?');
+            // получаем просвет
             $spaces='';
             while($next=array_shift($lex)){
                 if($next[1]=='spaces') $spaces.=$next[0];
                 else break;
             };
-            $key='';
+            // получаем ключ замены
+            $key='';$data='';
             do {
                 if ($next[1] == 'escaped') $key .=stripcslashes($next[0]);
                 elseif ($next[1] == 'plain') $key .=$next[0];
                 else break;
+                $next=array_shift($lex);
             } while(true);
-
-            while($next=array_shift($lex)) {
-                if($next[1]=='EOF') break;
-                elseif($next[1]=='spaces') $res.=$next[0];
-                elseif($next[1]=='plain') $res.=$next[0];
-                elseif($next[1]=='escaped') $res.=stripcslashes($next[0]);
-                elseif($next[1]=='open') $res.=$getopen();
-
-                $next = array_shift($lex);
-                if ($next[0] == 'close') return $eq . '';
-                if ($next[0] == 'open') return $eq . $getopen($next[1]);
-                if ($next[0] !== 'string') {
-                    throw new \Exception('wtf?');
-                }
-                $data = '';
-                $mod = '';
-                if (preg_match('~^(\s*)(.*?)(\||\?)(.*)$~us', $next[1], $m)) {
-                    $m[2] = trim($m[2]);
-                    if (property_exists($param, $m[2])) $data = $param->{$m[2]};
-                    if ($m[3] == '?') {
-                        // условие
-                        $ret = $m[4];
-                        while ($x = $getnext()) $ret .= $x;
-                        if (!empty($data))
-                            return $eq . $ret;
-                        return '';
-                    } else {
-                        $mod = trim($m[3] . $m[4]);
-                    }
-                } else if (preg_match('~^(\s*)(\S.*?)$~us', $next[1], $m)) {
-                    $m[2] = trim($m[2]);
-                    if (property_exists($param, $m[2])) $data = $param->{$m[2]};
-                }
-
-                // следом обязательно идет  close
-                $close = array_shift($lex);
-                if ($close[0] != 'close') {
-                    throw new \Exception('незакрыты кавычки');
-                }
-                // замена
-                if (is_array($data) || is_object($data)) {
-                    if (!!$quote) {
-                        return $eq . $m[1] . $quote(json_encode($data, JSON_UNESCAPED_UNICODE));
-                    } else {
-                        return $eq . $m[1] . json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
-                    }
+            $key=trim($key);
+            if (property_exists($param, $key)) $data = $param->{$key};
+            $mod='';
+            // логика или замена
+            if($next[1]=='EOF') {
+                throw new Exception('wtf?'); // тег не закрыт
+            } elseif($next[1]=='open') {
+                throw new Exception('wtf?'); // открытие тега не на том месте
+            } elseif($next[1]=='cond') {
+                // ?:
+                $x=[];
+                $x[$this->tags[1]]='close';$x[':']='false';
+                $true=$getplain($x);
+                if($true==='') $true=$data;
+                if($this->lastlex[1]=='false'){
+                    $x=[]; $x[$this->tags[1]]='close';
+                    $false=$getplain($x);
                 } else {
-                    if (!empty($mod)) {
-                        $x = explode('|', $mod);
-                        if (count($x) == 4) { // pluralform
-                            if ('' !== $m[1] && isset($data)) $last = $data;
-                            return $eq . $this->plural((int)$last, $x[1], $x[2], $x[3]);
-                        }
-                    }
-                    if ($mod == '|d') { // модификатор - время
-                        if (($x = strtotime($data)) > 0) $data = $x;
-                        if (date('Y') == date('Y', $data)) {
-                            return $eq . $m[1] . self::toRusDate($data, 'j F');
-                        } else
-                            return $eq . $m[1] . self::toRusDate($data, 'j F Y г');
-                    } elseif ($mod == '|t') { // модификатор - время
-                        if (!!$quote) {
-                            if (ctype_digit($data))
-                                return $eq . $m[1] . $quote(date("Y-m-d H:i:s", $data));
-                            return $eq . $m[1] . $quote(date('Y-m-d H:i:s', strtotime($data)));
-                        } else {
-                            return $eq . $m[1] . self::toRusDate($data, 'j F Y г. в H:i');
-                        }
-                    } elseif ($mod == '|l' && !!$quote) {
-                        return $eq . $m[1] . '"%' . addCslashes($data, '"\%_') . '%"';
-                    } elseif (is_null($data) || '' == $data) {
-                        if (!!$quote) {
-                            if (is_null($data)) {
-                                if ($eq == '=') {
-                                    return ' IS NULL';
-                                }
-                                return $eq . 'NULL';
-                            }
-                            return $eq . $quote($data);
-                        }
-                        $last = 0;
-                        return '';
-                    } else {
-                        $last = (int)$data;
-                        if (!!$quote) {
-                            return $eq . $m[1] . $quote($data);
-                        } else
-                            return $eq . $m[1] . $data;
-                    }
+                    $false='';
+                }
+                if(!!$quote){
+                    if (!empty($data)) {
+                        return $eq . $quote($true); // todo: =NULL
+                    } else return $eq . $quote($false);
+                } else {
+                    if (!empty($data)) {
+                        return $eq .  $true;
+                    } else return $eq . $false;
+                }
+            } elseif($next[1]=='mod'){
+                $x=[]; $x[$this->tags[1]]='close';
+                $mod=$next[0].$getplain($x);
+                if($this->lastlex[1]!='close'){
+                    throw new Exception('wtf?'); // незакрытый тег
                 }
             }
+
+            return $repl($eq,$spaces,$data,$quote,$mod);
+
         };
 
-        $getplain=function()use(&$getopen,&$eatnext){
-            $x=['\{'=>'escaped']; $x[$this->tags[0]]='open';$x['='.$this->tags[0]]='eqopen';
+        $getplain=function($stopat=[])use(&$getopen,&$eatnext){
+            $x=$stopat;
+            $x[$this->tags[0]]='open';$x['='.$this->tags[0]]='eqopen';
             $lex=$eatnext($x);
-            if(count($lex)==0) throw new \Exception('wtf?');
+            if(empty($lex)) throw new Exception('wtf?');
             $res='';
             while($next=array_shift($lex)){
                 if($next[1]=='EOF') break;
@@ -410,6 +419,13 @@ class tpl {
                 elseif($next[1]=='escaped') $res.=stripcslashes($next[0]);
                 elseif($next[1]=='open') $res.=$getopen();
                 elseif($next[1]=='eqopen') $res.=$getopen('=');
+                else {
+                    $this->lastlex=$next;
+                    break;
+                }
+                if(empty($lex)){
+                    $lex=$eatnext($x);
+                }
             };
             return $res;
         };
@@ -448,7 +464,7 @@ class tpl {
      */
     public static function __callStatic( $method, array $parameters){
         if (!array_key_exists($method, self::$methods)) {
-            throw new \Exception('The ' . $method . ' is not supported.');
+            throw new Exception('The ' . $method . ' is not supported.');
         }
         static $me;
         if (!isset($me)) {

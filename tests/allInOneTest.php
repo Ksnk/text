@@ -29,6 +29,45 @@ class allInOneTest extends TestCase
             throw new Exception('wrong parameters');
         }
     }
+
+    function test_escaped(){
+
+        $this->assertEquals(
+            'Символы { значение установлено } используются как границы в коде.',
+            tpl::text('Символы \{ значение {prop?:не установлено} \} используются как границы в {code}.',
+                ['code' => 'коде','prop' => 'установлено'])
+        );
+        $this->assertEquals(
+            'Символы \, } и { значение не установлено } используются как границы в коде.',
+            tpl::text('Символы \\, } и \{ значение {prop?:не установлено} \} используются как границы в {code}.',
+                ['code' => 'коде'])
+        );
+        $this->assertEquals(
+            'Символы { и } используются как границы в коде.',
+            tpl::text('Символы \{ и \} используются как границы в {code}.',
+                ['code' => 'коде'])
+        );
+        $this->assertEquals(
+            'Символы {коде } используются как границы в коде.',
+            tpl::text('Символы \{{code} \} используются как границы в {code}.',
+                ['code' => 'коде'])
+        );
+    }
+
+    function test_0()
+    {
+        $data=[
+            'index' => "'Добрый день{{ first_name ?,{{ first_name}}{{ second_name}}}}!'",'data'=>[]
+        ];
+        $data['data']['first_name']='Сергей';
+        $this->_test_tpl($data, "'Добрый день, Сергей!'");
+        unset($data['data']['first_name']);
+        $this->_test_tpl($data, "'Добрый день!'");
+        $data['data']['first_name']='Сергей';
+        $data['data']['second_name']='Батькович';
+        $this->_test_tpl($data, "'Добрый день, Сергей Батькович!'");
+    }
+
     function test_00()
     {
         $data=[
@@ -102,17 +141,6 @@ class allInOneTest extends TestCase
         );
     }
 
-    function test_0()
-    {
-        $data=[
-            'index' => "'Добрый день{{ first_name?,{{ first_name}}{{ second_name}}}}!'",
-        ];
-        $this->_test_tpl($data, "'Добрый день!'");
-        $data['data']['first_name']='Сергей';
-        $this->_test_tpl($data, "'Добрый день, Сергей!'");
-        $data['data']['second_name']='Батькович';
-        $this->_test_tpl($data, "'Добрый день, Сергей Батькович!'");
-    }
 // so let's test sql
 
     function test_sql(){
@@ -146,8 +174,6 @@ where user={user}',
                 ])
         );
     }
-
-
 
 }
 
