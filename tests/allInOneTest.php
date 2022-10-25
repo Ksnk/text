@@ -30,6 +30,21 @@ class allInOneTest extends TestCase
         }
     }
 
+    function test_incorrect2(){
+        $this->expectExceptionMessage('unclosed tag');
+        $this->assertEquals(
+            'Символы { значение установлено } используются как границы в коде.',
+            tpl::text('выводим {{prop}}',
+                ['code' => 'коде','prop' => 'установлено'])
+        );
+    }
+    function test_incorrect(){
+        $this->expectExceptionMessage('unclosed tag');
+        tpl::text('выводим {prop',
+            ['code' => 'коде','prop' => 'установлено']);
+
+    }
+
     function test_escaped(){
 
         $this->assertEquals(

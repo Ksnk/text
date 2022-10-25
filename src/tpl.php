@@ -369,10 +369,10 @@ class tpl {
             if (property_exists($param, $key)) $data = $param->{$key};
             $mod='';
             // логика или замена
-            if($next[1]=='EOF') {
-                throw new Exception('wtf?'); // тег не закрыт
+            if(empty($next) || $next[1]=='EOF') {
+                throw new Exception('unclosed tag'); // тег не закрыт
             } elseif($next[1]=='open') {
-                throw new Exception('wtf?'); // открытие тега не на том месте
+                throw new Exception('misplaced open tag '); // открытие тега не на том месте
             } elseif($next[1]=='cond') {
                 // ?:
                 $x=[];
