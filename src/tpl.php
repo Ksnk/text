@@ -7,7 +7,7 @@ namespace Ksnk\text;
  * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с копейками или без
  * @method static string text($template, $data) - текстовая замена, одинарные фигурные скобки
  * @method static string utext($template, $data) - текстовая замена, двойные фигурные скобки
- * @method static string sql($template, $data) - подготовленое выражение sql.
+ * @method static string sql($template, $data,$type='') - подготовленое выражение sql.
  * @method static string pl($n,$one, $two, $five) - окончание числительных (plural form).
  * @method static string rusd($daystr = null, $format = "j F, Y г.") - дата с месяцами - днями недели по русски.
  */
@@ -18,6 +18,8 @@ class tpl {
     var $hang, $dec, $numbf, $numb, $thau;
 
     const RUB="рубл|ь|я|ей;+копе|йка|йки|ек";
+
+    private $tags=[];
 
     /**
      * инициализация необходимых запчастей для прописи
@@ -231,6 +233,14 @@ class tpl {
         return $five;
     }
 
+    private function a2reg($a){
+        $r=[];
+        foreach($a as $k=>$v) {
+            $r=preg_quote($k);
+        }
+        return '('.implode(')|(',$r).')';
+    }
+
     /**
      * Шаблоны с минимальной логикий
      * @param $sql
@@ -245,97 +255,172 @@ class tpl {
      * {{Name?Dear Username}}
      * {{HasOrders?{{Discount}}}}
      * {{Name?, }}{{Name}}
-     * {{Date:d}} - дата с переводом названий месяцев в родительном падеже
+     * {{Date|d}} - дата с переводом названий месяцев в родительном падеже
      *
      */
     private function _($sql,$param, $type='text', $quote=null){
-        $placeholders=[];$cnt=0;$last=0;
-        if(is_array($param))$param=(object)$param;
-        // этап 1 - заменяем шаблоны - вставки на плейсхолдеры
-        if($type=='text' || $type=='utext'){ // игнорируем quote
-            $gimmireplace=function ($w) use ($type, $param, &$last) {
+        if(is_array($param)) $param=(object)$param;
 
-                if (property_exists($param,$w[3])) $data=$param->{$w[3]}; else {
-                    $w[2]='';
-                    $data='';
+        $eatnext=function($lexems)use(&$sql,&$getopen,&$getnext,&$param,&$last,$quote,$type){
+            $lex=[];
+            if(!empty($lex)) return array_shift($lex);
+            if(empty($sql)) return $lex[]=['','EOF'];
+            if(preg_match('~^(\s*)(.*?)(?:'.$this->a2reg($lexems).'(.*)$~us',$sql,$m)){
+                if(''!=$m[1]){
+                    $lex[]=[$m[1],'spaces'];
                 }
-                if (is_array($data) || is_object($data))
-                    return $w[1] .$w[2] . json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
-                else {
-                    if(!empty($w[4])){
-                        $x = explode('|', $w[4]);
-                        if (count($x) == 4) { // pluralform
-                            if ('' !== $w[3] && isset($data)) $last = $data;
-                            return $this->plural((int)$last,$x[1],$x[2],$x[3]);
-                        }
-                    }
-                    if($w[4]=='|t'){ // модификатор - время
-                        return $w[1] .$w[2] . self::toRusDate($data,'j F Y г. в H:i');
-                    } else {
-                        $last = $data;
-                        return $w[1] .$w[2] . $data;
+                if(''!=$m[2]){
+                    $lex[]=[$m[2],'plain'];
+                }
+                $idx=1;
+                foreach($lexems as $k=>$v){
+                    if(!empty($m[$idx])){
+                        $lex[]=[$m[$idx],$v];
                     }
                 }
+            } else {
+                $lex[]=[$sql,'plain'];
+                $sql='';
+            }
+            return $lex;
+        };
+
+
+        // лексемы
+        $lex=[];$last='';
+        $getopen=function($eq='')use(&$eatnext,&$getopen,&$param,&$last,$quote,$type){
+            // первый элемент либо условие, либо замена
+            $x=['\}'=>'escaped','\?'=>'escaped','\|'=>'escaped',
+                '?:'=>'default','?'=>'cond','|'=>'mod']; $x[$this->tags[1]]='close';
+            $lex=$eatnext($x);
+            if(count($lex)==0) throw new \Exception('wtf?');
+            $spaces='';
+            while($next=array_shift($lex)){
+                if($next[1]=='spaces') $spaces.=$next[0];
+                else break;
             };
-        } else {
-            $gimmireplace=function ($w) use ($type, $param, $quote) {
-                if (property_exists( $param,$w[3]) && is_null($param->{$w[3]})) {
-                    if ($w[1] == '=' && $type !== 'insert') {
-                        return  ' IS NULL';
-                    } else {
-                        return  $w[1] .$w[2] . 'NULL';
-                    }
-                } else if (property_exists($param,$w[3])) {
-                    $data=$param->{$w[3]};
-                    if (is_array($data))
-                        return  $w[1] .$w[2] . $quote(json_encode($data));
-                    else {
-                        if($w[4]=='|t'){ // модификатор - время
-                            if(ctype_digit($data))
-                                return $w[1] .$w[2] . $quote(date("Y-m-d H:i:s",$data)) ;
-                            return  $w[1] .$w[2] . $quote(date("Y-m-d H:i:s",strtotime($data))) ;
-                        } else if($w[4]=='|l'){ // модификатор - like
-                            return  $w[1] .$w[2] . '"%' . addCslashes($data, '"\%_') . '%"' ;
-                        } else{
-                            return  $w[1] .$w[2] . $quote($data);
-                        }
-                    }
+            $key='';
+            do {
+                if ($next[1] == 'escaped') $key .=stripcslashes($next[0]);
+                elseif ($next[1] == 'plain') $key .=$next[0];
+                else break;
+            } while(true);
+
+            while($next=array_shift($lex)) {
+                if($next[1]=='EOF') break;
+                elseif($next[1]=='spaces') $res.=$next[0];
+                elseif($next[1]=='plain') $res.=$next[0];
+                elseif($next[1]=='escaped') $res.=stripcslashes($next[0]);
+                elseif($next[1]=='open') $res.=$getopen();
+
+                $next = array_shift($lex);
+                if ($next[0] == 'close') return $eq . '';
+                if ($next[0] == 'open') return $eq . $getopen($next[1]);
+                if ($next[0] !== 'string') {
+                    throw new \Exception('wtf?');
                 }
-                return  $w[1] . $quote('');
-            };
-        }
-        if($type!='utext')
-            $reg=['/(=)?{(\s*)(\w*)\s*(\|[\|\w]*)?}/u','/{\s*(\w+)\s*\?([^}:]+)(?:\:([^}]+))?\s*}/'];
-        else
-            $reg=['/(=)?{{(\s*)(\w*)\s*(\|[\|\w]*)?}}/u','/{{\s*(\w+)\s*\?([^}:]+)(?:\:([^}]+))?\s*+}}/'];
-        $sql = preg_replace_callback(
-            $reg[0],function ($w) use ( &$placeholders, &$cnt,&$gimmireplace) {
-            if(empty($w[4]))$w[4]=''; // force to create
-            $placeholders[]=$gimmireplace($w);
-            return '@@'.($cnt++).'@@';
-        } , $sql);
-        // этап 2 - заменяем логику
-        $sql = preg_replace_callback(
-            $reg[1],
-            function ($w) use ( $param) {
-                if (!property_exists($param,$w[1])) {
-                    return '';
-                } else if(!!$param->{$w[1]}) {
-                    return $w[2];
+                $data = '';
+                $mod = '';
+                if (preg_match('~^(\s*)(.*?)(\||\?)(.*)$~us', $next[1], $m)) {
+                    $m[2] = trim($m[2]);
+                    if (property_exists($param, $m[2])) $data = $param->{$m[2]};
+                    if ($m[3] == '?') {
+                        // условие
+                        $ret = $m[4];
+                        while ($x = $getnext()) $ret .= $x;
+                        if (!empty($data))
+                            return $eq . $ret;
+                        return '';
+                    } else {
+                        $mod = trim($m[3] . $m[4]);
+                    }
+                } else if (preg_match('~^(\s*)(\S.*?)$~us', $next[1], $m)) {
+                    $m[2] = trim($m[2]);
+                    if (property_exists($param, $m[2])) $data = $param->{$m[2]};
+                }
+
+                // следом обязательно идет  close
+                $close = array_shift($lex);
+                if ($close[0] != 'close') {
+                    throw new \Exception('незакрыты кавычки');
+                }
+                // замена
+                if (is_array($data) || is_object($data)) {
+                    if (!!$quote) {
+                        return $eq . $m[1] . $quote(json_encode($data, JSON_UNESCAPED_UNICODE));
+                    } else {
+                        return $eq . $m[1] . json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
+                    }
                 } else {
-                    return isset($w[3])?$w[3]:'';
+                    if (!empty($mod)) {
+                        $x = explode('|', $mod);
+                        if (count($x) == 4) { // pluralform
+                            if ('' !== $m[1] && isset($data)) $last = $data;
+                            return $eq . $this->plural((int)$last, $x[1], $x[2], $x[3]);
+                        }
+                    }
+                    if ($mod == '|d') { // модификатор - время
+                        if (($x = strtotime($data)) > 0) $data = $x;
+                        if (date('Y') == date('Y', $data)) {
+                            return $eq . $m[1] . self::toRusDate($data, 'j F');
+                        } else
+                            return $eq . $m[1] . self::toRusDate($data, 'j F Y г');
+                    } elseif ($mod == '|t') { // модификатор - время
+                        if (!!$quote) {
+                            if (ctype_digit($data))
+                                return $eq . $m[1] . $quote(date("Y-m-d H:i:s", $data));
+                            return $eq . $m[1] . $quote(date('Y-m-d H:i:s', strtotime($data)));
+                        } else {
+                            return $eq . $m[1] . self::toRusDate($data, 'j F Y г. в H:i');
+                        }
+                    } elseif ($mod == '|l' && !!$quote) {
+                        return $eq . $m[1] . '"%' . addCslashes($data, '"\%_') . '%"';
+                    } elseif (is_null($data) || '' == $data) {
+                        if (!!$quote) {
+                            if (is_null($data)) {
+                                if ($eq == '=') {
+                                    return ' IS NULL';
+                                }
+                                return $eq . 'NULL';
+                            }
+                            return $eq . $quote($data);
+                        }
+                        $last = 0;
+                        return '';
+                    } else {
+                        $last = (int)$data;
+                        if (!!$quote) {
+                            return $eq . $m[1] . $quote($data);
+                        } else
+                            return $eq . $m[1] . $data;
+                    }
                 }
             }
-            , $sql);
-        // этап 3 - заменяем обратно плейсхолдеры
-        $sql = preg_replace_callback(
-            '/@@(\d+)@@/',
-            function ($w) use ( &$placeholders) {
-                return $placeholders[$w[1]];
-            }
-            , $sql);
+        };
 
-        return $sql;
+        $getplain=function()use(&$getopen,&$eatnext){
+            $x=['\{'=>'escaped']; $x[$this->tags[0]]='open';$x['='.$this->tags[0]]='eqopen';
+            $lex=$eatnext($x);
+            if(count($lex)==0) throw new \Exception('wtf?');
+            $res='';
+            while($next=array_shift($lex)){
+                if($next[1]=='EOF') break;
+                elseif($next[1]=='spaces') $res.=$next[0];
+                elseif($next[1]=='plain') $res.=$next[0];
+                elseif($next[1]=='escaped') $res.=stripcslashes($next[0]);
+                elseif($next[1]=='open') $res.=$getopen();
+                elseif($next[1]=='eqopen') $res.=$getopen('=');
+            };
+            return $res;
+        };
+
+        if($type=='utext') {
+            $this->tags=['{{','}}'];
+        } else {
+            $this->tags=['{','}'];
+        }
+
+        return $getplain();
     }
 
     /**
@@ -399,7 +484,7 @@ class tpl {
                         };
                     } else {
                         self::$quote = function ($n) {
-                            return "'".escapeshellarg($n)."'";
+                            return escapeshellarg($n);
                         };
                     }
                 }
