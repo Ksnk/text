@@ -4,7 +4,7 @@
 include_once '../vendor/autoload.php';
 
 use PHPUnit\Framework\TestCase;
-use Ksnk\text\tpl;
+use Ksnk\text\tpl, Ksnk\text\Model_tpl;
 
 class allInOneTest extends TestCase
 {
@@ -289,7 +289,7 @@ where user={user}',
 }
 
 
-class ChildTpl extends tpl
+class ChildTpl extends Model_tpl
 {
 
     function xxx()
