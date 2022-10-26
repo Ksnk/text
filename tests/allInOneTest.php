@@ -6,6 +6,8 @@ include_once '../vendor/autoload.php';
 use PHPUnit\Framework\TestCase;
 use Ksnk\text\tpl, Ksnk\text\Model_tpl;
 
+error_reporting(E_STRICT | E_ALL | E_NOTICE);
+
 class allInOneTest extends TestCase
 {
 
@@ -292,7 +294,7 @@ where user={user}',
 class ChildTpl extends Model_tpl
 {
 
-    function xxx()
+    static function xxx()
     {
         return 'xxx';
     }

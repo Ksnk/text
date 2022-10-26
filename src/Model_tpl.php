@@ -361,6 +361,7 @@ class Model_tpl
             } elseif (is_numeric($data)) {
                 $last = $data;
             }
+            $mod_ext='';
             if (!empty($mod)) {
                 $x = explode('|', $mod);
                 if (count($x) == 4) { // pluralform

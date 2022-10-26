@@ -29,7 +29,7 @@ class tpl
         'sql' => '_',
         'utext' => '_',
         'num2str'=>'prop',
-        'toRusDate'=>'rusd', // синоним внешний
+        'toRusDate'=>'rusd', // синоним внешний, иногда у меня в коде встречается tpl::toRusDate
         'mod' => 'implement_text_Modificator'
     ];
 
