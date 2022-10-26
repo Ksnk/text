@@ -165,8 +165,7 @@
 различить способ вызова через этот параметр.
 
 
-
-     tpl::mod('x', function($data,$mod_ext,$spaces,$key,$mod){
+      tpl::mod('x', function($data,$mod_ext,$spaces,$key,$mod){
         if (($x = strtotime($data)) > 0) $data = $x;
         if(!empty($mod_ext))
             $format= $mod_ext;
@@ -174,8 +173,7 @@
             $format= 'j F Y г. в H:i';
         } 
         return $spaces . tpl::rusd($data, $format);
-     });
-
+      });
 
 
 ## tpl::utext
