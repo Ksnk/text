@@ -165,6 +165,7 @@
 различить способ вызова через этот параметр.
 
 
+
      tpl::mod('x', function($data,$mod_ext,$spaces,$key,$mod){
         if (($x = strtotime($data)) > 0) $data = $x;
         if(!empty($mod_ext))
@@ -174,6 +175,7 @@
         } 
         return $spaces . tpl::rusd($data, $format);
      });
+
 
 
 ## tpl::utext
