@@ -31,6 +31,50 @@ class allInOneTest extends TestCase
         }
     }
 
+    function testMoney()
+    {
+        $pattern = 'Сумма прописью:{prop}';
+        // вывод суммы из древней базы бухгалтера
+        $cost = '23.456,45';
+        $this->assertEquals(
+            'Сумма прописью:двадцать три тысячи четыреста пятьдесят шесть рублей 45 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
+        // приличная, во всех отношениях строка
+        $cost = '23456.45';
+        $this->assertEquals(
+            'Сумма прописью:23   456 рублей',
+            tpl::text($pattern, ['prop' => tpl::numd(-$cost, tpl::RUB, true)])
+        );
+        // вывод суммы с обязательными копейками -00 коп
+        $cost = 23451;
+        $this->assertEquals(
+            'Сумма прописью:двадцать три тысячи четыреста пятьдесят один рубль 00 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
+        // вывод суммы без обязательных копеек
+        $cost = 23451;
+        $this->assertEquals(
+            'Сумма прописью:двадцать три тысячи четыреста пятьдесят один рубль',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB)])
+        );
+        // проверка склонения в женском роде одна-две вместо один-два
+        $number = 101;
+        $this->assertEquals(
+            'сто один баран на поле',
+            tpl::text('{prop} на поле', [
+                'prop' => tpl::prop($number, "баран||а|ов")])
+        );
+        // проверка склонения в женском роде одна-две вместо один-два
+        $number = 101;
+        $this->assertEquals(
+            'сто одна овца на поле',
+            tpl::text('{prop} на поле', [
+                'prop' => tpl::prop($number, "+овц|а|ы|ец")])
+        );
+    }
+
+
     /*
         function test_incorrect2(){
             $this->expectExceptionMessage('unclosed tag');
@@ -150,43 +194,6 @@ class allInOneTest extends TestCase
         $this->_test_tpl($data, "Сейчас 4 часа");
         $data['data']['hour'] = '7';
         $this->_test_tpl($data, "Сейчас 7 часов");
-    }
-
-    function testMoney()
-    {
-        $pattern = 'Сумма прописью:{prop}';
-        // вывод суммы с обязательными копейками
-        $cost = 23456.45;
-        $this->assertEquals(
-            'Сумма прописью:двадцать три тысячи четыреста пятьдесят шесть рублей 45 копеек',
-            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
-        );
-        // вывод суммы с обязательными копейками -00 коп
-        $cost = 23451;
-        $this->assertEquals(
-            'Сумма прописью:двадцать три тысячи четыреста пятьдесят один рубль 00 копеек',
-            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
-        );
-        // вывод суммы без обязательных копеек
-        $cost = 23451;
-        $this->assertEquals(
-            'Сумма прописью:двадцать три тысячи четыреста пятьдесят один рубль',
-            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB)])
-        );
-        // проверка склонения в женском роде одна-две вместо один-два
-        $number = 101;
-        $this->assertEquals(
-            'сто один баран на поле',
-            tpl::text('{prop} на поле', [
-                'prop' => tpl::prop($number, "баран||а|ов")])
-        );
-        // проверка склонения в женском роде одна-две вместо один-два
-        $number = 101;
-        $this->assertEquals(
-            'сто одна овца на поле',
-            tpl::text('{prop} на поле', [
-                'prop' => tpl::prop($number, "+овц|а|ы|ец")])
-        );
     }
 
 // so let's test sql

@@ -5,7 +5,8 @@ namespace Ksnk\text;
 use \Exception;
 
 /**
- * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с копейками или без
+ * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с подписью с копейками или без
+ * @method static string numd($LL, $valute = FALSE, $kop = FALSE) - сумма цифрами, с подписью, с копейками или без
  * @method static string text($template, $data) - текстовая замена, одинарные фигурные скобки
  * @method static string utext($template, $data) - текстовая замена, двойные фигурные скобки
  * @method static string sql($template, $data,$type='',$quote=null) - подготовленое выражение sql.
@@ -43,8 +44,10 @@ class tpl {
 
     /**
      *  изготовление массива из входных параметров
+     * @param string $ss
+     * @return array
      */
-    function prep($ss = ' ')
+    private function prep($ss = ' ')
     {
         $res = array();
         $ss = func_get_args();
@@ -62,12 +65,21 @@ class tpl {
     /**
      * выводит прописью число меньше 1000 с подписью,
      * если число отрицательное - оно выводится цифрами, с разбивкой по тысячам
+     * @param $n
+     * @param string $podpis
+     * @param bool $last
+     * @return string
      */
-    function sema($n, $s = ' ', $last = false) // $last - обязательно дописывать подпись
+    function sema($n, $podpis = ' ', $last = false) // $last - обязательно дописывать подпись
     {
-        if (!is_array($s)) {
-            $s = $this->prep($s);
-            $s = $s[0];
+        if(!empty($podpis) && is_string($podpis)){
+            $podpis=call_user_func_array([$this,'prep'],explode(';',$podpis));
+            $podpis = $podpis[0];
+        }
+        if (!$podpis) $podpis = $this->prep();
+        if (!is_array($podpis)) {
+            $podpis = $this->prep($podpis);
+            $podpis = $podpis[0];
         }
         $res = "";
 
@@ -90,16 +102,16 @@ class tpl {
                 $res .= $this->dec[floor($n / 10)] . " ";
                 $n %= 10;
             }
-            if ($n < 3) $res .= !empty($s['fem']) ? $this->numbf[$n] : $this->numb[$n];
+            if ($n < 3) $res .= !empty($podpis['fem']) ? $this->numbf[$n] : $this->numb[$n];
             else $res .= $this->numb[$n];
         }
 
         if ($n == 0) {
-            if ($res || $last) $res .= $s[3];
+            if ($res || $last) $res .= $podpis[3];
         }
-        else if ($n == 1) $res .= $s[1];
-        else if ($n < 5) $res .= $s[2];
-        else $res .= $s[3];
+        else if ($n == 1) $res .= $podpis[1];
+        else if ($n < 5) $res .= $podpis[2];
+        else $res .= $podpis[3];
 
         return $res;
     }
@@ -112,39 +124,54 @@ class tpl {
      *  значение копеек - первые 2 цифры, причем .5 == .50 , .456==.45
      *
      *  $LL - собственно строка
-     *  $valute - индекс денежных подписей
+     *  $podpis - индекс денежных подписей
      *  $kop - копейки выводить обязательно, даже если 0. или только в случае не 0!
+     * @param $LL
+     * @param bool $podpis
+     * @param bool $_kop
+     * @return string
      */
-    function num2str($LL, $valute = FALSE, $kop = FALSE)
+    function num2str($LL, $podpis = FALSE, $_kop = FALSE)
     {
 
-        if(!empty($valute) && is_string($valute)){
-            $valute=call_user_func_array([$this,'prep'],explode(';',$valute));
+        if(!empty($podpis) && is_string($podpis)){
+            $podpis=call_user_func_array([$this,'prep'],explode(';',$podpis));
         }
-        if (!$valute) $valute = $this->prep();
+        if (!$podpis) $podpis = $this->prep();
 
-        $mm = explode('.', str_replace(',', '.', $LL), 2);
-        if (empty($mm[1])) $mm[1] = 0;
-        else {
-            if (strlen($mm[1]) < 2) $mm[1] .= '00';
-            $mm[1] = intval($mm[1]{0} . $mm[1]{1});
+        // Разбираемся, что нужно выводить
+        if(is_numeric($LL)){
+            // счастье!
+            $rub=floor($LL);
+            $kop=floor(($LL-$rub)*100);
+        } else {
+            // Это строка - иногда бухи путают точку и запятую. Иногда отделяют точками тысячи.
+            // Но если сумма с копейками, их всегда 2 цифры!
+            $x= explode('.', str_replace(',', '.', $LL));
+            $kop=array_pop($x);
+            if(strlen($kop)!==2){
+                // это не копейки (
+                array_push($x,$kop); $kop=0;
+            }
+            $rub=join('',$x);
         }
+        // режем число по 3 цифры
         // вместо $m=str_split(str_repeat(' ',3-strlen($mm[0])%3).$mm[0],3) приходится использовать
-        $m = explode(' ', trim(chunk_split(str_repeat('0', 3 - strlen($mm[0]) % 3) . $mm[0], 3, ' ')));
+        $m = explode(' ', trim(chunk_split(str_repeat('0', 3 - strlen($rub) % 3) . $rub, 3, ' ')));
         $res = '';
         for ($i = count($m) - 2, $j = 0; $i >= 0; $i--, $j++) {
             $res .= ' ' . $this->sema(intval($m[$j]), $this->thau[$i]);
         }
         $x = intval($m[$j]);
         if ((!$res) && (!$x))
-            $res .= ' 00' . $this->sema(0, $valute[0], true);
+            $res .= ' 00' . $this->sema(0, $podpis[0], true);
         else
-            $res .= ' ' . $this->sema($x, $valute[0], true);
-        if (isset($valute[1])) {
-            if ($mm[1]) {
-                $res .= ' ' . $this->sema(-$mm[1], $valute[1], true); // копейки цифрами
-            } elseif ($kop)
-                $res .= ' 00' . $this->sema(0, $valute[1], true);
+            $res .= ' ' . $this->sema($x, $podpis[0], true);
+        if (isset($podpis[1])) {
+            if ($kop) {
+                $res .= ' ' . $this->sema(-$kop, $podpis[1], true); // копейки цифрами
+            } elseif ($_kop)
+                $res .= ' 00' . $this->sema(0, $podpis[1], true);
         }
 
         return trim($res);
@@ -249,9 +276,10 @@ class tpl {
      * Шаблоны с минимальной логикий
      * @param $sql
      * @param $param
-     * @param $type - text - игнорируем квотацию, insert - sql_insert, все остальное тождественно select
+     * @param string $type - text - игнорируем квотацию, insert - sql_insert, все остальное тождественно select
      * @param $quote
      * @return string|string[]|null
+     * @throws Exception
      * @example
      * {{Email}}
      * Добрый день, {{Name?:уважаемый подписчик}} - ДОбрый день, Олег|Добрый день, уважаемый подписчик
@@ -260,7 +288,6 @@ class tpl {
      * {{HasOrders?{{Discount}}}}
      * {{Name?, }}{{Name}}
      * {{Date|d}} - дата с переводом названий месяцев в родительном падеже
-     *
      */
     private function _($sql,$param, $type='text', $quote=null){
         if(is_array($param)) $param=(object)$param;
@@ -443,7 +470,7 @@ class tpl {
     }
 
     /**
-     * А вот для нормальной жизни унас есть возможность статического вызова в упрощенной форме
+     * А вот для нормальной жизни у нас есть возможность статического вызова в упрощенной форме
      */
 
     /**
@@ -456,7 +483,8 @@ class tpl {
         'utext'=> '_',
         'prop' =>'num2str',
         'pl' =>'plural',
-        'rusd' =>'toRusDate'
+        'rusd' =>'toRusDate',
+        'numd' =>'sema'
     ];
 
     /**
