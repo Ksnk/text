@@ -31,8 +31,63 @@ class allInOneTest extends TestCase
         }
     }
 
+    function test_to_debug()
+    {
+        $this->assertEquals(
+            'Символы {коде } используются как границы в коде.',
+            tpl::text('Символы \{{code|\}} } используются как границы в {code}.',
+                ['code' => 'коде'])
+        );
+
+    }
+
+    function test_date()
+    {
+        $this->assertEquals(
+            'Новый год к нам мчиццо 2022.',
+            tpl::text('Новый год к нам мчиццо {date|d|Y}.',
+                ['date' => '2022-01-01'])
+        );
+
+        tpl::mod('x', function ($data, $mod_ext, $spaces) {
+            if (($x = strtotime($data)) > 0) $data = $x;
+            if (!empty($mod_ext))
+                $format = $mod_ext;
+            else {
+                $format = 'j F Y г. в H:i';
+            }
+            return $spaces . tpl::rusd($data, $format);
+        });
+        $this->assertEquals(
+            'Новый год к нам мчиццо 2022-12.',
+            tpl::text('Новый год к нам мчиццо {date|x|Y-h}.',
+                ['date' => '2022-01-01'])
+        );
+    }
+
     function testMoney()
     {
+
+        // проверка склонения в женском роде одна-две вместо один-два
+        $number = 101;
+        $this->assertEquals(
+            'сто один баран на поле',
+            tpl::text('{prop} на поле', [
+                'prop' => tpl::prop($number, "баран||а|ов")])
+        );
+        $number = 101;
+        $this->assertEquals(
+            '101 баран на поле',
+            tpl::text('{number} баран{||а|ов} на поле', [
+                'number' => $number])
+        );
+        $this->assertEquals(
+            '101 баран на поле',
+            tpl::text('{number} {баран||а|ов} на поле', [
+                'number' => $number])
+        );
+
+
         $pattern = 'Сумма прописью:{prop}';
         // вывод суммы из древней базы бухгалтера
         $cost = '23.456,45';
@@ -85,14 +140,6 @@ class allInOneTest extends TestCase
             );
         }
     */
-    function test_date(){
-        $this->assertEquals(
-            'Новый год к нам мчиццо 2022.',
-            tpl::text('Новый год к нам мчиццо {date|d|Y}.',
-                ['date' => '2022-01-01'])
-        );
-    }
-
 
     function test_incorrect()
     {
@@ -140,7 +187,7 @@ class allInOneTest extends TestCase
         );
         $this->assertEquals(
             'Символы {коде } используются как границы в коде.',
-            tpl::text('Символы \{{code} \} используются как границы в {code}.',
+            tpl::text('Символы \{{code|\}} } используются как границы в {code}.',
                 ['code' => 'коде'])
         );
     }
@@ -179,7 +226,7 @@ class allInOneTest extends TestCase
         $data['data']['hour'] = '7';
         $this->_test_tpl($data, "Сейчас 7 часов");
         $data = [
-            'index' => "Сейчас{{ hour}} час{{hour||а|ов}}",
+            'index' => "Сейчас{{ hour}} {{час||а|ов}}",
         ];
         $this->_test_tpl($data, "Сейчас часов");
         $data['data']['hour'] = '11';
@@ -229,6 +276,25 @@ where user={user}',
                     'user' => null
                 ])
         );
+    }
+
+    function test_inheritance()
+    {
+        tpl::_(new ChildTpl);
+        $this->assertEquals('xxx',
+            tpl::xxx()
+        );
+    }
+
+}
+
+
+class ChildTpl extends tpl
+{
+
+    function xxx()
+    {
+        return 'xxx';
     }
 
 }
