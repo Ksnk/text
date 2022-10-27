@@ -83,10 +83,10 @@ class Model_tpl
         $ss = func_get_args();
         for ($i = 0, $numargs = count($ss); $i < $numargs; $i++) {
             if (is_string($ss[$i])) {
-                $bas = explode("|", trim($ss[$i], '+') . "||||", 5);
-                $res[$i]['fem'] = ($ss[$i]{0} == '+');
-                for ($j = 1; $j < 4; $j++)
-                    $res[$i][$j] = " " . $bas[0] . $bas[$j];
+                if(preg_match('~^(\+)?([^\|]*)(?:\|([^\|]*))(?:\|([^\|]*))(?:\|([^\|]*))$~u',$ss[$i],$mm)){
+                    $res[$i]=['fem'=>$mm[1]!=''];
+                    for($j=1;$j<4;$j++) $res[$i][$j]=' '.$mm[2].$mm[2+$j];
+                };
             }
         }
         return $res;
@@ -106,7 +106,6 @@ class Model_tpl
             $podpis = call_user_func_array([$this, 'prep'], explode(';', $podpis));
             $podpis = $podpis[0];
         }
-        if (!$podpis) $podpis = $this->prep();
         if (!is_array($podpis)) {
             $podpis = $this->prep($podpis);
             $podpis = $podpis[0];
@@ -114,16 +113,10 @@ class Model_tpl
         $res = "";
 
         if ($n < 0) {
-            $n = -$n;
-            if ($n >= 1000) {
-                $res .= $this->numd(-floor($n / 1000)) . " ";
-                $n %= 1000;
-            }
-            $res .= sprintf('%2d', $n);
-            while ($n > 20) {
-                $n %= 10;
-            }
+            $n=-$n;
+            $res=rtrim(number_format($n,0,'',' ').' ');
         } else {
+            if ($n == '0' && $last) $res .= 'ноль';
             if ($n >= 100) {
                 $res .= $this->hang[floor($n / 100)] . " ";
                 $n %= 100;
@@ -136,11 +129,7 @@ class Model_tpl
             else $res .= $this->numb[$n];
         }
 
-        if ($n == 0) {
-            if ($res || $last) $res .= $podpis[3];
-        } else if ($n == 1) $res .= $podpis[1];
-        else if ($n < 5) $res .= $podpis[2];
-        else $res .= $podpis[3];
+        $res .= $this->pl($n, $podpis[1], $podpis[2], $podpis[3]);
 
         return $res;
     }
@@ -171,11 +160,11 @@ class Model_tpl
         // Разбираемся, что нужно выводить
         if (is_numeric($LL)) {
             // счастье!
-            $rub = floor($LL);
-            $kop = floor(($LL - $rub) * 100);
+            $rub = '' . floor($LL);
+            $kop = '' . floor(($LL - $rub) * 100);
         } else {
             // Это строка - иногда бухи путают точку и запятую. Иногда отделяют точками тысячи.
-            // Но если сумма с копейками, их всегда 2 цифры!
+            // Но если сумма с копейками, их всегда 2 цифры c конца!
             $x = explode('.', str_replace(',', '.', $LL));
             $kop = array_pop($x);
             if (strlen($kop) !== 2) {
@@ -185,23 +174,28 @@ class Model_tpl
             }
             $rub = join('', $x);
         }
-        // режем число по 3 цифры
-        // вместо $m=str_split(str_repeat(' ',3-strlen($mm[0])%3).$mm[0],3) приходится использовать
-        $m = explode(' ', trim(chunk_split(str_repeat('0', 3 - strlen($rub) % 3) . $rub, 3, ' ')));
-        $res = '';
-        for ($i = count($m) - 2, $j = 0; $i >= 0; $i--, $j++) {
-            $res .= ' ' . $this->numd(intval($m[$j]), $this->thau[$i]);
+        // режем число по 3 цифры. Вот такой я загадочный, да
+        $res = [];
+        $trio = '';
+        $p = $podpis[0];
+        $idx = 0;
+        for ($i = strlen($rub) - 1; $i >= 0; $i--) {
+            $trio = $rub[$i] . $trio;
+            if (strlen($trio) == 3) {
+                array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
+                $p = $this->thau[$idx++];
+                $trio = '';
+            }
         }
-        $x = intval($m[$j]);
-        if ((!$res) && (!$x))
-            $res .= ' 00' . $this->numd(0, $podpis[0], true);
-        else
-            $res .= ' ' . $this->numd($x, $podpis[0], true);
+        if ($trio !== '') {
+            array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
+        }
+        $res = implode(' ', $res);
         if (isset($podpis[1])) {
             if ($kop) {
-                $res .= ' ' . $this->numd(-$kop, $podpis[1], true); // копейки цифрами
+                $res .= ' ' . sprintf("%02d", $kop) . $this->pl($kop, $podpis[1][1], $podpis[1][2], $podpis[1][3]); // копейки цифрами
             } elseif ($_kop)
-                $res .= ' 00' . $this->numd(0, $podpis[1], true);
+                $res .= ' 00' . $podpis[1][3];
         }
 
         return trim($res);
@@ -331,6 +325,7 @@ class Model_tpl
             $lexems['\{'] = 'escaped';
             $lexems['\}'] = 'escaped';
             $lexems['\?'] = 'escaped';
+            $lexems['\|'] = 'escaped';
             $lexems['\:'] = 'escaped';
             if (empty($sql)) return [['', 'EOF']];
             if (preg_match('~^(\s*)(.*?)(?:' . $this->a2reg($lexems) . ')(.*)$~us', $sql, $m)) {
@@ -361,7 +356,7 @@ class Model_tpl
             } elseif (is_numeric($data)) {
                 $last = $data;
             }
-            $mod_ext='';
+            $mod_ext = '';
             if (!empty($mod)) {
                 $x = explode('|', $mod);
                 if (count($x) == 4) { // pluralform
@@ -403,6 +398,9 @@ class Model_tpl
                 if ($next[1] == 'escaped') $key .= stripcslashes($next[0]);
                 elseif ($next[1] == 'plain') $key .= $next[0];
                 else break;
+                if (empty($lex)) {
+                    $lex = $eatnext($x);
+                }
                 $next = array_shift($lex);
             } while (true);
             $key = trim($key);
@@ -442,10 +440,12 @@ class Model_tpl
             return $repl($eq, $spaces, $data, $key, $quote, $mod);
         };
 
-        $getplain = function ($stopat = []) use (&$getopen, &$eatnext) {
+        $getplain = function ($stopat = []) use (&$getopen, &$eatnext, $quote) {
             $x = $stopat;
             $x[$this->tags[0]] = 'open';
-            $x['=' . $this->tags[0]] = 'eqopen';
+            if (!!$quote) {
+                $x['=' . $this->tags[0]] = 'eqopen';
+            }
             $lex = $eatnext($x);
             if (empty($lex)) throw new Exception('wtf?');
             $res = '';

@@ -35,6 +35,41 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $key='Очень странная переменная {1|2}?:';
+        $pattern = 'Сумма прописью:{ '.addcslashes($key,'{}?:\|').' }';
+        $this->assertEquals(
+            'Сумма прописью: А вот!',
+            tpl::text($pattern, [$key => 'А вот!'])
+        );
+
+        $pattern = 'Сумма прописью:{prop}';
+        $cost = 12345678;
+        $this->assertEquals(
+            'Сумма прописью:12 345 678 копеек',
+            tpl::text($pattern, ['prop' => tpl::numd(-$cost,'+копе|йка|йки|ек')])
+        );
+
+        $cost = '0.5';
+        $this->assertEquals(
+            'Сумма прописью:ноль рублей 50 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
+        // вывод суммы из древней базы бухгалтера
+        $cost = '23.456,45';
+        $this->assertEquals(
+            'Сумма прописью:двадцать три тысячи четыреста пятьдесят шесть рублей 45 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
+        $cost = '0,45';
+        $this->assertEquals(
+            'Сумма прописью:ноль рублей 45 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
+        $cost = '0,05';
+        $this->assertEquals(
+            'Сумма прописью:ноль рублей 05 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
+        );
         $this->assertEquals(
             'Символы {коде } используются как границы в коде.',
             tpl::text('Символы \{{code|\}} } используются как границы в {code}.',
@@ -98,10 +133,14 @@ class allInOneTest extends TestCase
             tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
         );
         // приличная, во всех отношениях строка
-        $cost = '23456.45';
+        $cost = '23451.45';
         $this->assertEquals(
-            'Сумма прописью:23   456 рублей',
-            tpl::text($pattern, ['prop' => tpl::numd(-$cost, tpl::RUB, true)])
+            'Сумма прописью:23 451 рубль',
+            tpl::text($pattern, ['prop' => tpl::numd(-$cost, "рубл|ь|я|ей", true)])
+        );
+        $this->assertEquals(
+            'Сумма прописью:двадцать три тысячи четыреста пятьдесят один рубль 45 копеек',
+            tpl::text($pattern, ['prop' => tpl::prop($cost, tpl::RUB, true)])
         );
         // вывод суммы с обязательными копейками -00 коп
         $cost = 23451;
