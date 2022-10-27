@@ -4,7 +4,7 @@
 include_once '../vendor/autoload.php';
 
 use PHPUnit\Framework\TestCase;
-use Ksnk\text\tpl, Ksnk\text\Model_tpl;
+use Ksnk\text\tpl, Ksnk\text\Model_tpl, Ksnk\text\Model_sql;
 
 error_reporting(E_STRICT | E_ALL | E_NOTICE | E_CORE_WARNING | E_USER_NOTICE | E_USER_WARNING);
 
@@ -347,7 +347,7 @@ where user={user}',
 }
 
 
-class ChildTpl extends Model_tpl
+class ChildTpl extends Model_sql
 {
 
     static function xxx()

@@ -26,9 +26,6 @@ class tpl
      */
     private static $methods = [
         '_' => '',
-        'text' => '_',
-        'sql' => '_',
-        'utext' => '_',
         'num2str'=>'prop',
         'toRusDate'=>'rusd', // синоним внешний, иногда у меня в коде встречается tpl::toRusDate
         'mod' => 'implement_text_Modificator'
@@ -44,7 +41,7 @@ class tpl
     {
         static $me;
         if (!isset($me)) {
-            $me = new Model_tpl();
+            $me = new Model_sql();
         }
         if (!array_key_exists($method, self::$methods)) {
             if (method_exists($me, $method)) {
@@ -61,41 +58,7 @@ class tpl
                 return;
             }
             throw new Exception('Parameter not a subclass');
-        } elseif ($method == 'text') {
-            $parameters[2] = 'text';
-        } elseif ($method == 'utext') {
-            $parameters[2] = 'utext';
-        } elseif ($method == 'sql') {
-            if (empty($parameters[2])) {
-                $parameters[2] = 'select';
-            }
-            if (empty($parameters[3])) {
-                if (is_null(self::$quote)) {
-                    if (class_exists('\JFactory')) {
-                        self::$quote = function ($n) {
-                            $db = \JFactory::getDbo();
-                            return $db->quote($n);
-                        };
-                    } else if (class_exists('Ksnk\project\core\ENGINE')) {
-                        self::$quote = function ($n) {
-                            $db = \Ksnk\project\core\ENGINE::db();
-                            return '"' . $db->escape($n) . '"';
-                        };
-                    } else if (class_exists('Ksnk\core\ENGINE')) {
-                        self::$quote = function ($n) {
-                            $db = \Ksnk\core\ENGINE::db();
-                            return '"' . $db->escape($n) . '"';
-                        };
-                    } else {
-                        self::$quote = function ($n) {
-                            return escapeshellarg($n);
-                        };
-                    }
-                }
-                $parameters[3] = self::$quote;
-            }
         }
-
         return call_user_func_array([$me, self::$methods[$method]], $parameters);
     }
 }

@@ -39,18 +39,6 @@ class Model_tpl
                 return '';
             return $spaces . $data;
         });
-        $this->implement_sql_Modificator('l', function ($data, $mod_ext, $spaces, $key, $mod) {
-            return $spaces . '"%' . addCslashes($data, '"\%_') . '%"';
-        });
-        $this->implement_sql_Modificator('', function ($data, $mod_ext, $spaces, $key, $mod, $quote, $eq) {
-            if (is_null($data)) {
-                if ($eq == '=') {
-                    return ' IS NULL';
-                }
-                return $eq . 'NULL';
-            }
-            return $eq . $spaces . $quote($data);
-        });
     }
 
     /**
@@ -296,6 +284,17 @@ class Model_tpl
             $r[] = preg_quote($k);
         }
         return '(' . implode(')|(', $r) . ')';
+    }
+
+    public function text($sql, $param, $type = ''){
+        if(empty($type))
+            $type='text';
+        return $this->_($sql, $param, $type);
+    }
+    public function utext($sql, $param, $type = ''){
+        if(empty($type))
+            $type='utext';
+        return $this->_($sql, $param, $type);
     }
 
     /**
