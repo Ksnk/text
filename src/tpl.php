@@ -5,6 +5,7 @@ namespace Ksnk\text;
 use \Exception;
 
 /**
+ * Полностью статический класс обертка для текстовых утилит.
  * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с подписью с копейками или без
  * @method static string numd($LL, $valute = FALSE, $kop = FALSE) - сумма цифрами, с подписью, с копейками или без
  * @method static string text($template, $data) - текстовая замена, одинарные фигурные скобки

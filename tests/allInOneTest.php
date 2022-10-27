@@ -35,6 +35,11 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $data=['number'=>23];
+        $this->assertEquals(
+            '23 барана на поле!',
+            tpl::text('{number} баран{number||а|ов} на поле!', $data));
+
         $key='Очень странная переменная {1|2}?:';
         $pattern = 'Сумма прописью:{ '.addcslashes($key,'{}?:\|').' }';
         $this->assertEquals(
@@ -123,6 +128,18 @@ class allInOneTest extends TestCase
             tpl::text('{number} {баран||а|ов} на поле', [
                 'number' => $number])
         );
+
+        $data=['number'=>23];
+        $this->assertEquals(
+            '23 барана на поле!',
+            tpl::text('{number} баран{||а|ов} на поле!', $data));
+        $this->assertEquals(
+            '23 барана на поле!',
+            tpl::text('{number} баран{number||а|ов} на поле!', $data));
+        $this->assertEquals(
+            '23 барана на поле!',
+            tpl::text('{number} {баран||а|ов} на поле!', $data));
+
 
 
         $pattern = 'Сумма прописью:{prop}';

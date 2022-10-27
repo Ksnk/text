@@ -349,7 +349,7 @@ class Model_tpl
             return $lex;
         };
 
-        $repl = function ($eq, $spaces, $data, $key, $quote, $mod = '') use (&$last) {
+        $repl = function ($eq, $spaces, $data, $key, $quote, $mod = '') use (&$last,&$param) {
             // замена
             if (is_array($data) || is_object($data)) {
                 $data = json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
@@ -360,7 +360,7 @@ class Model_tpl
             if (!empty($mod)) {
                 $x = explode('|', $mod);
                 if (count($x) == 4) { // pluralform
-                    return $eq . $key . $this->pl((int)$last, $x[1], $x[2], $x[3]);
+                    return $eq . (property_exists($param,$key)?'':$key) . $this->pl((int)$last, $x[1], $x[2], $x[3]);
                 }
                 $mod = trim($x[1]);
                 array_shift($x);
