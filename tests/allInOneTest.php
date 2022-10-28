@@ -383,6 +383,27 @@ where user={user}',
         );
     }
 
+    function test_Benchmark()
+    {
+        tpl::_(new Model_tpl);
+        $pattern='{one}{two}{three}{four}';
+        $data=[
+            'one'=>1,
+            'two'=>2,
+            'three'=>3,
+            'four'=>4,
+        ];
+        $this->assertEquals('1234',
+            tpl::text($pattern, $data)
+        );
+        $test_array=$data;
+        array_walk($test_array, function(&$a, $b) { $a = '{'.$a.'}'; });
+        $this->assertEquals('1234',
+            strtr($pattern, $test_array)
+        );
+
+    }
+
 }
 
 

@@ -53,11 +53,15 @@ class tpl
 
         // корректируем парамеры по умолчанию
         if ($method == '_') {
-            if (is_subclass_of($parameters[0], get_class($me) /*'Ksnk\text\Model_tpl'*/)) {
-                $me = $parameters[0];
-                return;
+            $me_class='Ksnk\text\Model_tpl';
+            if(!get_class($parameters[0])==$me_class) {
+                $parents = class_parents($parameters[0]);
+                if (!isset($parents[$me_class])) {
+                    throw new Exception('Parameter not a subclass');
+                }
             }
-            throw new Exception('Parameter not a subclass');
+            $me = $parameters[0];
+            return;
         }
         return call_user_func_array([$me, self::$methods[$method]], $parameters);
     }
