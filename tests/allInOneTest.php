@@ -35,6 +35,14 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $this->assertEquals(
+            'select xxx=NULL,user= NULL,
+where user IS NULL',
+            tpl::sql('select xxx=NULL{user?, created<now()},user= {user},
+where user={user}',
+                ['user' => null])
+        );
+
         $data=['number'=>23];
         $this->assertEquals(
             '23 барана на поле!',
@@ -330,6 +338,37 @@ text={text},data={data}
 where user={user}',
                 ['text' => 'just a some text',
                     'data' => [1, 2, 3, 4, 5],
+                    'own' => 0,
+                    'user' => null
+                ])
+        );
+        $this->assertEquals(
+            'insert into table_sclad set  created=NOW(),
+user_email = "0",xxx=NULL,user= NULL,
+text="just a some text",data="[1,2,3,4,5]"
+where user IS NULL',
+            tpl::sql('insert into table_sclad set  created=NOW(),
+user_email = {own},xxx=NULL{user?, created<now()},user= {user},
+text={text},data={data}
+where user={user}',
+                ['text' => 'just a some text',
+                    'data' => [1, 2, 3, 4, 5],
+                    'own' => 0,
+                    'user' => null
+                ])
+        );
+
+        $this->assertEquals(
+            'insert into table_sclad set  created=NOW(),
+user_email = "0",xxx=NULL,user= NULL,
+text="just a some text",data like "[1,2,3,\"\%\_\\\\\"\",5]%",text like "%just a some text%"
+where user IS NULL',
+            tpl::sql('insert into table_sclad set  created=NOW(),
+user_email = {own},xxx=NULL{user?, created<now()},user= {user},
+text={text},data like {data|l|_%},text like {text|l}
+where user={user}',
+                ['text' => 'just a some text',
+                    'data' => [1, 2, 3, '%_"', 5],
                     'own' => 0,
                     'user' => null
                 ])

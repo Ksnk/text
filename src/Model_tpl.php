@@ -10,9 +10,9 @@ class Model_tpl
 
     var $hang, $dec, $numbf, $numb, $thau;
 
-    var $modificator = [], $sqlmodificator = [];
+    var $modificator = [];
 
-    private $tags = [], $lastlex = [];
+    protected $tags = [], $lastlex = [];
 
     function __construct()
     {
@@ -71,9 +71,9 @@ class Model_tpl
         $ss = func_get_args();
         for ($i = 0, $numargs = count($ss); $i < $numargs; $i++) {
             if (is_string($ss[$i])) {
-                if(preg_match('~^(\+)?([^\|]*)(?:\|([^\|]*))(?:\|([^\|]*))(?:\|([^\|]*))$~u',$ss[$i],$mm)){
-                    $res[$i]=['fem'=>$mm[1]!=''];
-                    for($j=1;$j<4;$j++) $res[$i][$j]=' '.$mm[2].$mm[2+$j];
+                if (preg_match('~^(\+)?([^\|]*)(?:\|([^\|]*))(?:\|([^\|]*))(?:\|([^\|]*))$~u', $ss[$i], $mm)) {
+                    $res[$i] = ['fem' => $mm[1] != ''];
+                    for ($j = 1; $j < 4; $j++) $res[$i][$j] = ' ' . $mm[2] . $mm[2 + $j];
                 };
             }
         }
@@ -88,7 +88,7 @@ class Model_tpl
      * @param bool $last
      * @return string
      */
-    function numd($n, $podpis = ' ', $last = false) // $last - обязательно дописывать подпись
+    public function numd($n, $podpis = ' ', $last = false) // $last - обязательно дописывать подпись
     {
         if (!empty($podpis) && is_string($podpis)) {
             $podpis = call_user_func_array([$this, 'prep'], explode(';', $podpis));
@@ -101,8 +101,8 @@ class Model_tpl
         $res = "";
 
         if ($n < 0) {
-            $n=-$n;
-            $res=rtrim(number_format($n,0,'',' ').' ');
+            $n = -$n;
+            $res = rtrim(number_format($n, 0, '', ' ') . ' ');
         } else {
             if ($n == '0' && $last) $res .= 'ноль';
             if ($n >= 100) {
@@ -137,7 +137,7 @@ class Model_tpl
      * @param bool $_kop
      * @return string
      */
-    function prop($LL, $podpis = FALSE, $_kop = FALSE)
+    public function prop($LL, $podpis = FALSE, $_kop = FALSE)
     {
 
         if (!empty($podpis) && is_string($podpis)) {
@@ -195,10 +195,10 @@ class Model_tpl
      * @param string $format
      * @return mixed
      */
-    function rusd($daystr = null, $format = "j F, Y г.")
+    public function rusd($daystr = null, $format = "j F, Y г.")
     {
-        if ($daystr) {
-            if (!is_numeric($daystr)) $daystr = strtotime($daystr);
+        if (!!$daystr) {
+            if (($x = strtotime($daystr)) > 0) $daystr = $x;
         } else
             $daystr = time();
         $replace = array(
@@ -245,8 +245,7 @@ class Model_tpl
             'sun' => 'вск',
         );
 
-        return str_replace(array_keys($replace), array_values($replace),
-            mb_strtolower(date($format, $daystr), 'UTF-8'));
+        return strtr(mb_strtolower(date($format, $daystr), 'UTF-8'),$replace);
     }
 
     /**
@@ -257,7 +256,7 @@ class Model_tpl
      * @return mixed
      * @example ~(11,'копейка','копейки','копеек');
      */
-    function pl($n, $one, $two, $five)
+    public function pl($n, $one, $two, $five)
     {
         if (is_array($n))
             $n = count($n);
@@ -286,15 +285,32 @@ class Model_tpl
         return '(' . implode(')|(', $r) . ')';
     }
 
-    public function text($sql, $param, $type = ''){
-        if(empty($type))
-            $type='text';
+    public function text($sql, $param, $type = '')
+    {
+        if (empty($type))
+            $type = 'text';
         return $this->_($sql, $param, $type);
     }
-    public function utext($sql, $param, $type = ''){
-        if(empty($type))
-            $type='utext';
+
+    public function utext($sql, $param, $type = '')
+    {
+        if (empty($type))
+            $type = 'utext';
         return $this->_($sql, $param, $type);
+    }
+
+    protected function modifyIt($mod, $key, $last, $data, $mod_ext, $spaces)
+    {
+        if (isset($this->modificator[$mod])) {
+            $call = $this->modificator[$mod];
+            return $call('' == $key ? $last : $data, $mod_ext, $spaces, $key, $mod);
+        }
+        return $spaces . $data;
+    }
+
+    protected function appendsimbols(&$lex)
+    {
+
     }
 
     /**
@@ -318,7 +334,7 @@ class Model_tpl
     {
         if (is_array($param)) $param = (object)$param;
 
-        $eatnext = function ($lexems) use (&$sql, &$getopen, &$getnext, &$param, &$last, $quote, $type) {
+        $eatnext = function ($lexems) use (&$sql, &$getopen, &$getnext, &$param, &$last, $type) {
             $lex = [];
             $lexems['\\'] = 'escaped';
             $lexems['\{'] = 'escaped';
@@ -337,7 +353,10 @@ class Model_tpl
                 $idx = 2;
                 foreach ($lexems as $k => $v) {
                     if (!empty($m[++$idx])) {
-                        $lex[] = [$m[$idx], $v];
+                        if (is_array($v))
+                            $lex[] = [$m[$idx], $v[0], $v[1]];
+                        else
+                            $lex[] = [$m[$idx], $v];
                     }
                 }
                 $sql = $m[$idx + 1];
@@ -348,7 +367,7 @@ class Model_tpl
             return $lex;
         };
 
-        $repl = function ($eq, $spaces, $data, $key, $quote, $mod = '') use (&$last,&$param) {
+        $repl = function ($spaces, $data, $key, $quote, $mod = '') use (&$last, &$param) {
             // замена
             if (is_array($data) || is_object($data)) {
                 $data = json_encode($data, JSON_UNESCAPED_UNICODE); // сгодится для отладки
@@ -359,26 +378,19 @@ class Model_tpl
             if (!empty($mod)) {
                 $x = explode('|', $mod);
                 if (count($x) == 4) { // pluralform
-                    return $eq . (property_exists($param,$key)?'':$key) . $this->pl((int)$last, $x[1], $x[2], $x[3]);
+                    return (property_exists($param, $key) ? '' : $key) . $this->pl((int)$last, $x[1], $x[2], $x[3]);
                 }
                 $mod = trim($x[1]);
                 array_shift($x);
                 array_shift($x);
                 $mod_ext = join('|', $x);
             }
-            if (isset($this->sqlmodificator[$mod]) && !!$quote) {
-                $call = $this->sqlmodificator[$mod];
-                return $call('' == $key ? $last : $data, $mod_ext, $spaces, $key, $mod, $quote, $eq);
-            } elseif (isset($this->modificator[$mod])) {
-                $call = $this->modificator[$mod];
-                return $eq . $call('' == $key ? $last : $data, $mod_ext, $spaces, $key, $mod);
-            }
-            return $eq . $spaces . $data;
+            return $this->modifyIt($mod, $key, $last, $data, $mod_ext, $spaces);// $spaces . $data;
         };
 
         // лексемы
         $last = '';
-        $getopen = function ($eq = '') use (&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl) {
+        $getopen = function () use (&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl) {
             // первый элемент либо условие, либо замена
             $x = ['?' => 'cond', '|' => 'mod'];
             $x[$this->tags[1]] = 'close';
@@ -425,8 +437,8 @@ class Model_tpl
                     $false = '';
                 }
                 if (!empty($data)) {
-                    return $eq . $true;
-                } else return $eq . $false;
+                    return $true;
+                } else return $false;
             } elseif ($next[1] == 'mod') {
                 $x = [];
                 $x[$this->tags[1]] = 'close';
@@ -436,25 +448,31 @@ class Model_tpl
                 }
             }
 
-            return $repl($eq, $spaces, $data, $key, $quote, $mod);
+            return $repl($spaces, $data, $key, $quote, $mod);
         };
 
-        $getplain = function ($stopat = []) use (&$getopen, &$eatnext, $quote) {
+        /**
+         * @param array $stopat
+         * @return string
+         */
+        $getplain = function ($stopat = []) use (&$getopen, &$getplain, &$eatnext, $quote) {
             $x = $stopat;
             $x[$this->tags[0]] = 'open';
-            if (!!$quote) {
-                $x['=' . $this->tags[0]] = 'eqopen';
-            }
+            $this->appendsimbols($x);
+
             $lex = $eatnext($x);
             if (empty($lex)) throw new Exception('wtf?');
             $res = '';
             while ($next = array_shift($lex)) {
                 if ($next[1] == 'EOF') break;
                 elseif ($next[1] == 'spaces') $res .= $next[0];
-                elseif ($next[1] == 'plain') $res .= $next[0];
+                elseif ($next[1] == 'operator') {
+                    $operand = $getplain($stopat); // todo: используется трюк, что целый getplain получится только перед тегом-открытием. Неочевидно
+                    $xxx = $next[2];
+                    $res .= $xxx($operand);
+                } elseif ($next[1] == 'plain') $res .= $next[0];
                 elseif ($next[1] == 'escaped') $res .= stripcslashes($next[0]);
                 elseif ($next[1] == 'open') $res .= $getopen();
-                elseif ($next[1] == 'eqopen') $res .= $getopen('=');
                 else {
                     $this->lastlex = $next;
                     break;
@@ -475,18 +493,9 @@ class Model_tpl
         return $getplain();
     }
 
-    /**
-     * А вот для нормальной жизни у нас есть возможность статического вызова в упрощенной форме
-     */
-
-    function implement_text_Modificator($mod, $callable)
+    public function implement_text_Modificator($mod, $callable)
     {
         $this->modificator[$mod] = $callable;
-    }
-
-    function implement_sql_Modificator($mod, $callable)
-    {
-        $this->sqlmodificator[$mod] = $callable;
     }
 
 }

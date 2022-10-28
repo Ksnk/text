@@ -5,7 +5,7 @@ namespace Ksnk\text;
 use \Exception;
 
 /**
- * Полностью статический класс обертка для текстовых утилит.
+ * Полностью статический класс-обертка для текстовых утилит.
  * @method static string prop($LL, $valute = FALSE, $kop = FALSE) - сумма прописью, с подписью с копейками или без
  * @method static string numd($LL, $valute = FALSE, $kop = FALSE) - сумма цифрами, с подписью, с копейками или без
  * @method static string text($template, $data) - текстовая замена, одинарные фигурные скобки
@@ -26,7 +26,7 @@ class tpl
      */
     private static $methods = [
         '_' => '',
-        'num2str'=>'prop',
+        'num2str'=>'prop',   // синоним внешний, иногда у меня в коде встречается tpl::num2str
         'toRusDate'=>'rusd', // синоним внешний, иногда у меня в коде встречается tpl::toRusDate
         'mod' => 'implement_text_Modificator'
     ];
