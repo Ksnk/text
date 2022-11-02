@@ -35,6 +35,13 @@ class Model_sql extends Model_tpl
             if ($mod_ext[1] == '%') $suf = '%';
             return $spaces . '"' . $pref . addCslashes($data, '"\%_') . $suf . '"';
         });
+        $timemod = function ($data, $mod_ext, $spaces, $key, $mod, $q) {
+            if (($x = strtotime($data)) > 0) $data = $x;
+            $format = 'Y-m-d H:i:s';
+            return $spaces . $q(date($format,$data));
+        };
+        $this->implement_sql_Modificator('d', $timemod);
+        $this->implement_sql_Modificator('t', $timemod);
         //  по умолчанию подстановки делаем так
         $this->implement_sql_Modificator('', function ($data, $mod_ext, $spaces, $key, $mod, $q /*, $quote, $eq */) {
             if (is_null($data)) {
