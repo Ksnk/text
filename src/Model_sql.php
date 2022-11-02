@@ -40,6 +40,8 @@ class Model_sql extends Model_tpl
             if (is_null($data)) {
                 return 'NULL';
             }
+            if(!is_callable($q))
+                return  $data;
             return $spaces . $q($data);
         });
     }
