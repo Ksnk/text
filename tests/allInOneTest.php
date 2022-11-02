@@ -391,6 +391,12 @@ where user={user}',
         );
         //insert into forms_mail_queue set timetosend=1970-01-01 03:00:00,sended=0,acy_mailid=172894293,address=zulia@mail.ru,param={"mailid":172894293,"email":"zulia@mail.ru","name":"Иванова Зульфия Фяридовна","timetosend":1667374377,"action":"unisender","messageid":172894293}
         //--><!--xxx-debug-func:insert,cls:Ksnk\model\database\xDatabase_parent,file:/var/www/html/express.kadis.org/src/model/mail_Helper.php,line:112 = "QUERY[0.000574]: insert into forms_mail_queue set timetosend=1970-01-01 03:00:00,sended=0,acy_mailid=172894293,address=zulia@mail.ru,param={"mailid":172894293,"email":"zulia@mail.ru","name":"Иванова Зульфия Фяридовна","timetosend":1667374377,"action":"unisender","messageid":172894293}
+        $this->assertEquals(
+            'insert into forms_mail_queue set timetosend="2022-11-02 10:32:57",sended=0,acy_mailid="172894293",address="zulia@mail.ru",param="{ mailid :172894293, email : zulia@mail.ru , name : Иванова Зульфия Фяридовна , timetosend :1667374377, action : unisender , messageid :172894293}"',
+            tpl::sql('insert into forms_mail_queue set timetosend={timetosend|t},sended=0,acy_mailid={mailid},address={email},param={data}',
+                $data,'insert',function($n){return escapeshellarg($n);})
+        );
+        /*, function($n)use(&$db){return "'".$db->escape($n)."'";}*/
     }
 
     function test_inheritance()
