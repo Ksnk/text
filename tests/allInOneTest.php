@@ -35,6 +35,22 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $data=[
+            "mailid"=>172894293,
+            "email"=>"zulia@mail.ru",
+            'name'=>'Иванова Зульфия Фяридовна',
+            'timetosend'=>1667374377,
+            "action"=>"unisender",
+            "messageid"=>172894293
+
+        ];
+        $data['data']=$data;
+        $this->assertEquals(
+            'insert into forms_mail_queue set timetosend="2022-11-02 10:32:57",sended=0,acy_mailid="172894293",address="zulia@mail.ru",param="{ mailid :172894293, email : zulia@mail.ru , name : Иванова Зульфия Фяридовна , timetosend :1667374377, action : unisender , messageid :172894293}"',
+            tpl::sql('insert into forms_mail_queue set timetosend={timetosend|t},sended=0,acy_mailid={mailid},address={email},param={data}',
+                $data,'insert',function($n){return escapeshellarg($n);})
+        );
+
         $this->assertEquals(
             'select xxx=NULL,user= NULL,
 where user IS NULL',
@@ -307,6 +323,26 @@ where user={user}',
         $this->_test_tpl($data, "Сейчас 4 часа");
         $data['data']['hour'] = '7';
         $this->_test_tpl($data, "Сейчас 7 часов");
+    }
+
+    function test_parseKGM(){
+        $this->assertEquals(
+            1073741824,
+            tpl::parseKMG('1g')
+        );
+        $this->assertEquals(
+            512,
+            tpl::parseKMG('.5k')
+        );
+        $this->assertEquals(
+            3145728,
+            tpl::parseKMG('3m')
+        );
+        $this->assertEquals(
+            3145728,
+            tpl::parseKMG('3м')
+        );
+
     }
 
 // so let's test sql

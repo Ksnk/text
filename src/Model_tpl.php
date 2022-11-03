@@ -42,6 +42,22 @@ class Model_tpl
     }
 
     /**
+     * парсинг конструкций .5k 1K и т.д.
+     * @param $str
+     * @return float|int
+     */
+    function parseKMG($str)
+    {
+        if (preg_match('/^(.*)(?:([кk])|([мm])|([гg]))$/iu', $str, $m)) {
+            if (!empty($m[2])) return 1024 * $m[1];
+            if (!empty($m[3])) return 1024 * 1024 * $m[1];
+            if (!empty($m[4])) return 1024 * 1024 * 1024 * $m[1];
+        }
+        return 1 * $str;
+    }
+
+
+    /**
      * инициализация необходимых запчастей для прописи
      */
     private function _prop()
@@ -385,7 +401,7 @@ class Model_tpl
                 array_shift($x);
                 $mod_ext = join('|', $x);
             }
-            return $this->modifyIt($mod, $key, $last, $data, $mod_ext, $spaces);// $spaces . $data;
+            return $this->modifyIt($mod, $key, $last, $data, $mod_ext, $spaces,$quote);// $spaces . $data;
         };
 
         // лексемы

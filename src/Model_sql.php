@@ -53,12 +53,12 @@ class Model_sql extends Model_tpl
         });
     }
 
-    protected function modifyIt($mod, $key, $last, $data, $mod_ext, $spaces)
+    protected function modifyIt($mod, $key, $last, $data, $mod_ext, $spaces,$quote=null)
     {
         // для режима sql проверяем дополнительные модификаторы
         if (isset($this->sqlmodificator[$mod]) && $this->sql_mod) {
             $call = $this->sqlmodificator[$mod];
-            return $call('' == $key ? $last : $data, $mod_ext, $spaces, $key, $mod, $this->quote);
+            return $call('' == $key ? $last : $data, $mod_ext, $spaces, $key, $mod, $quote?:$this->quote);
         } else {
             return parent::modifyIt($mod, $key, $last, $data, $mod_ext, $spaces);
         }
