@@ -34,6 +34,11 @@ class Model_tpl
         };
         $this->implement_text_Modificator('d', $timemod);
         $this->implement_text_Modificator('t', $timemod);
+        $this->implement_text_Modificator('e', function ($data, $mod_ext, $spaces, $key, $mod) {
+            if (is_null($data) || '' === $data)
+                return '';
+            return $spaces . htmlspecialchars($data);
+        });
         $this->implement_text_Modificator('', function ($data, $mod_ext, $spaces, $key, $mod) {
             if (is_null($data) || '' === $data)
                 return '';
