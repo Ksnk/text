@@ -235,7 +235,7 @@ class Model_tpl
             'october' => 'октября',
             'november' => 'ноября',
             'december' => 'декабря',
-
+// ну и чтоб 2 раза не вставать - переведем все остальное
             'jan' => 'янв',
             'feb' => 'фев',
             'mar' => 'мар',
@@ -265,8 +265,7 @@ class Model_tpl
             'sat' => 'сбт',
             'sun' => 'вск',
         );
-
-        return strtr(mb_strtolower(date($format, $daystr), 'UTF-8'),$replace);
+        return str_ireplace(array_keys($replace),array_values($replace),date($format, $daystr));
     }
 
     /**
@@ -292,34 +291,65 @@ class Model_tpl
         return $five;
     }
 
+    /**
+     * подготовка регулярки и массива лексем для парсинга.
+     * функция серьезно тормозит в профайлере, из за uksort.
+     * статическое кэширование позволило ускорить тест бенчмарка в 3 раза.
+     * @param $a
+     * @return mixed
+     */
     private function a2reg(&$a)
     {
-        $r = [];
-        uksort($a, function ($a, $b) {
-            if (strlen($a) > strlen($b)) return -1;
-            if (strlen($a) == strlen($b)) return 0;
-            return 1;
-        });
+        static $cache=[];
+        $key = count($a);
         foreach ($a as $k => $v) {
-            $r[] = preg_quote($k);
+            if ($v != 'escaped')
+                $key .= $k;
         }
-        return '(' . implode(')|(', $r) . ')';
+        if (!isset($cache[$key])) {
+            $r = [];
+            $a['\\'] = 'escaped';
+            $a['\{'] = 'escaped';
+            $a['\}'] = 'escaped';
+            $a['\?'] = 'escaped';
+            $a['\|'] = 'escaped';
+            $a['\:'] = 'escaped';
+
+            uksort($a, function ($a, $b) {
+                if (strlen($a) > strlen($b)) return -1;
+                if (strlen($a) == strlen($b)) return 0;
+                return 1;
+            });
+            foreach ($a as $k => $v) {
+                $r[] = preg_quote($k);
+            }
+            $cache[$key] = ['(' . implode(')|(', $r) . ')', $a];
+        }
+        $a = $cache[$key][1];
+        return $cache[$key][0];
     }
 
-    public function text($sql, $param, $type = '')
+    public function text($sql, $param)
     {
-        if (empty($type))
-            $type = 'text';
-        return $this->_($sql, $param, $type);
+        return $this->_($sql, $param, 'text');
     }
 
-    public function utext($sql, $param, $type = '')
+    public function utext($sql, $param)
     {
-        if (empty($type))
-            $type = 'utext';
-        return $this->_($sql, $param, $type);
+        return $this->_($sql, $param, 'utext');
     }
 
+    /**
+     * Внутренняя функция - поиск и применение модификатора. Вынесена в класс
+     * для возможности переопределить в наследнике
+     * @param $mod
+     * @param $key
+     * @param $last
+     * @param $data
+     * @param $mod_ext
+     * @param $spaces
+     * @return string
+     */
     protected function modifyIt($mod, $key, $last, $data, $mod_ext, $spaces)
     {
         if (isset($this->modificator[$mod])) {
@@ -329,6 +359,10 @@ class Model_tpl
         return $spaces . $data;
     }
 
+    /**
+     * Дополнительные символы для парсинга шаблона
+     * @param $lex
+     */
     protected function appendsimbols(&$lex)
     {
 
@@ -355,15 +389,14 @@ class Model_tpl
     {
         if (is_array($param)) $param = (object)$param;
 
+        /**
+         * Разрушительный парсинг шаблона
+         * @param $lexems
+         * @return array|\string[][]
+         */
         $eatnext = function ($lexems) use (&$sql, &$getopen, &$getnext, &$param, &$last, $type) {
-            $lex = [];
-            $lexems['\\'] = 'escaped';
-            $lexems['\{'] = 'escaped';
-            $lexems['\}'] = 'escaped';
-            $lexems['\?'] = 'escaped';
-            $lexems['\|'] = 'escaped';
-            $lexems['\:'] = 'escaped';
             if (empty($sql)) return [['', 'EOF']];
+            $lex = [];
             if (preg_match('~^(\s*)(.*?)(?:' . $this->a2reg($lexems) . ')(.*)$~us', $sql, $m)) {
                 if ('' != $m[1]) {
                     $lex[] = [$m[1], 'spaces'];

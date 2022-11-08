@@ -12,7 +12,7 @@ class allInOneTest extends TestCase
 {
 
     /**
-     * вспомогательная функция
+     * вспомогательная функция - utext
      * @param $d
      * @param string $pattern
      * @throws Exception
@@ -51,6 +51,11 @@ class allInOneTest extends TestCase
                 $data,'insert',function($n){return escapeshellarg($n);})
         );
 
+        $this->assertEquals(
+            'А вот какой то текст',
+            tpl::text('А вот какой то текст',
+                ['user' => null])
+        );
         $this->assertEquals(
             'select xxx=NULL,user= NULL,
 where user IS NULL',
@@ -272,6 +277,25 @@ where user={user}',
             tpl::text('Символы \{{code|\}} } используются как границы в {code}.',
                 ['code' => 'коде'])
         );
+        $stat=[];
+        $stat['date']=strtotime('2022-10-10');
+        $stat['send']=23;
+        $stat['empty']=2;
+        $stat['double']=1;
+        $stat['waiting']=2;
+        $stat['total']=27;
+
+        $this->assertEquals(
+            'Всего строк - 27, поставлено в очередь 23 письма для отправки на 10 октября, 2 строки пустые или не email, 1 адрес повторяется, 2 письма уже поставлены в очередь ранее
+',
+            tpl::text('Всего строк - {total}'.
+            ', поставлено в очередь {send} пись{|мо|ма|ем} для отправки на {date|d}'.
+            '{empty?, {empty} строк{|а|и|} пустые или не email}'.
+            '{double?, {double} адрес{||а|ов} повторя{|е|ю|ю}тся}'.
+            '{waiting?, {waiting} пись{|мо|ма|ем} уже поставлены в очередь ранее}'.PHP_EOL
+            , $stat)
+        );
+
     }
 
     function test_0()
@@ -307,9 +331,7 @@ where user={user}',
         $this->_test_tpl($data, "Сейчас 4 часа");
         $data['data']['hour'] = '7';
         $this->_test_tpl($data, "Сейчас 7 часов");
-        $data = [
-            'index' => "Сейчас{{ hour}} {{час||а|ов}}",
-        ];
+        unset($data['data']);
         $this->_test_tpl($data, "Сейчас часов");
         $data['data']['hour'] = '11';
         $this->_test_tpl($data, "Сейчас 11 часов");
@@ -323,6 +345,7 @@ where user={user}',
         $this->_test_tpl($data, "Сейчас 4 часа");
         $data['data']['hour'] = '7';
         $this->_test_tpl($data, "Сейчас 7 часов");
+
     }
 
     function test_parseKGM(){
@@ -441,6 +464,61 @@ where user={user}',
         $this->assertEquals('xxx',
             tpl::xxx()
         );
+    }
+
+    function test_Benchmark()
+    {
+        $pattern='{one}{two}{three}{four}';
+        $data=[
+            'one'=>1,
+            'two'=>2,
+            'three'=>3,
+            'four'=>4,
+        ];
+        $variant=[];
+        $variant['tpl::text']=function()use($pattern, $data){
+            return tpl::text($pattern, $data);
+        };
+
+        $variant['strtr']=function()use($pattern, $data){
+            $r=[];
+            array_walk($data, function($a, $b) use(&$r){ $r['{'.$b.'}']=$a; });
+            return strtr($pattern, $r);
+        };
+
+        $variant['pregreplace']=function()use($pattern, $data){
+            $keys=[];$regs=[];
+            array_walk($data, function($a, $b) use(&$keys,&$regs) {
+                $regs[] = '~{\s*' . preg_quote($b) . '\s*}~su';
+                $keys[] = $a;
+            });
+            return preg_replace($regs, $keys, $pattern);
+        };
+        $variant['pregreplace2']=function()use($pattern, $data){
+            $keys=[];$regs=[];
+            array_walk($data, function($a, $b) use(&$keys,&$regs) {
+                $regs[] = '~{\s*' . $b . '\s*}~su';
+                $keys[] = $a;
+            });
+            return preg_replace($regs, $keys, $pattern);
+        };
+
+
+        // tpl::_(new Model_tpl);
+        foreach($variant as $v){
+            $this->assertEquals('1234',
+                $v()
+            );
+        }
+        // OK! start benchmark
+        foreach($variant as $name=>$v){
+            $start=microtime(true);
+            for($i=0;$i<1000;$i++) {
+                $x=$v();
+            }
+            printf('%s - %.03f sec'. PHP_EOL,$name, microtime(true)-$start);
+        }
+
     }
 
 }
