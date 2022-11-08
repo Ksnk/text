@@ -36,6 +36,11 @@ class allInOneTest extends TestCase
     function test_to_debug()
     {
         $this->assertEquals(
+            'А вот какой то текст',
+            tpl::text('А вот какой то текст',
+                ['user' => null])
+        );
+        $this->assertEquals(
             'select xxx=NULL,user= NULL,
 where user IS NULL',
             tpl::sql('select xxx=NULL{user?, created<now()},user= {user},

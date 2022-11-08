@@ -287,6 +287,13 @@ class Model_tpl
         }
         if (!isset($cache[$key])) {
             $r = [];
+            $a['\\'] = 'escaped';
+            $a['\{'] = 'escaped';
+            $a['\}'] = 'escaped';
+            $a['\?'] = 'escaped';
+            $a['\|'] = 'escaped';
+            $a['\:'] = 'escaped';
+
             uksort($a, function ($a, $b) {
                 if (strlen($a) > strlen($b)) return -1;
                 if (strlen($a) == strlen($b)) return 0;
@@ -369,12 +376,6 @@ class Model_tpl
         $eatnext = function ($lexems) use (&$sql, &$getopen, &$getnext, &$param, &$last, $type) {
             if (empty($sql)) return [['', 'EOF']];
             $lex = [];
-            $lexems['\\'] = 'escaped';
-            $lexems['\{'] = 'escaped';
-            $lexems['\}'] = 'escaped';
-            $lexems['\?'] = 'escaped';
-            $lexems['\|'] = 'escaped';
-            $lexems['\:'] = 'escaped';
             if (preg_match('~^(\s*)(.*?)(?:' . $this->a2reg($lexems) . ')(.*)$~us', $sql, $m)) {
                 if ('' != $m[1]) {
                     $lex[] = [$m[1], 'spaces'];
