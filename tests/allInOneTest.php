@@ -35,6 +35,20 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $data=['user'=>10];
+        $this->assertEquals(
+            'one',
+            tpl::text('{user>5?one:two}',
+                $data,'insert',function($n){return escapeshellarg($n);})
+        );
+        $this->assertEquals(
+            'two',
+            tpl::text('{user>10?one:two}',
+                $data,'insert',function($n){return escapeshellarg($n);})
+        );
+
+
+
         $data=[
             "mailid"=>172894293,
             "email"=>"zulia@mail.ru",

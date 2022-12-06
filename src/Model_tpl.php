@@ -470,6 +470,30 @@ class Model_tpl
             } while (true);
             $key = trim($key);
             if (property_exists($param, $key)) $data = $param->{$key};
+            else {
+                $k=trim($key).'=';$stack=[];$evaled=false;$op='';
+                while(!empty($k) && preg_match('/^(.*?)\s*([<>=]+)\s*(.*)$/',$k,$m)){
+                    if (property_exists($param, $m[1])) $stack[]= $param->{$m[1]};
+                    else $stack[]=$m[1];
+                    if(!empty($op)) {
+                        $evaled=true;
+                        $b=array_pop($stack);
+                        $a=array_pop($stack);
+                        if($op=='<'){
+                            $stack[]=$a<$b;
+                        } else if($op=='>'){
+                            $stack[]=$a>$b;
+                        } else if($op=='='){
+                            $stack[]=$a==$b;
+                        }
+                    }
+                    $op=$m[2];
+                    $k=trim($m[3]);
+                }
+                if($evaled && $op=='=' && count($stack)==1){
+                    $data =array_pop($stack);
+                }
+            }
             $mod = '';
             // логика или замена
             if (empty($next) || $next[1] == 'EOF') {
