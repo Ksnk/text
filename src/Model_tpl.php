@@ -24,6 +24,7 @@ class Model_tpl
             else if ($mod == 't') {
                 $format = 'j F Y г. в H:i';
             } else {
+                if(empty($data)) $data=0;
                 if (date('Y') == date('Y', $data)) {
                     $format = 'j F';
                 } else {

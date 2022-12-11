@@ -35,6 +35,11 @@ class allInOneTest extends TestCase
 
     function test_to_debug()
     {
+        $v=['created'=>'2022/12/11','title'=>'Не удалось найти ролика', 'video'=>'#', 'text'=>''];
+        $this->assertEquals(
+            ': ,телефон:, 11 декабря выбран ролик - `Не удалось найти ролика`',tpl::text('{subprofile}{profile}{userid}: {first_name}{ last_name},телефон:{phone_number}{phone}, {created|d} выбран ролик {present}- `{title}`',
+array_merge($v)));
+
         $data=['count'=>'15','total'=>'16'];
         $this->assertEquals(
             '<b>Ваш счет - 15 из 16</b>. Поздравляем с успешным прохождением тестирования! 
