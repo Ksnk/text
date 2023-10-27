@@ -192,13 +192,13 @@ class Model_tpl
         for ($i = strlen($rub) - 1; $i >= 0; $i--) {
             $trio = $rub[$i] . $trio;
             if (strlen($trio) == 3) {
-                array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
+                array_unshift($res, $this->numd(intval($trio), $p, $i == 0));
                 $p = $this->thau[$idx++];
                 $trio = '';
             }
         }
         if ($trio !== '') {
-            array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
+            array_unshift($res, $this->numd(intval($trio), $p, $i <= 0));
         }
         $res = implode(' ', $res);
         if (isset($podpis[1])) {
