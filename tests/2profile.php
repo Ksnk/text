@@ -34,9 +34,9 @@ $data=[
 ];
 // tpl::_(new Model_tpl);
 $divide=microtime(true);
-for($i=0;$i<100;$i++){
+for($i=0;$i<1000;$i++){
     $x=tpl::text($pattern, $data);
 }
 $fin=microtime(true);
 printf("%.03f sec ",$fin-$divide);
-print_r(tpl::stat());
+//1000 - 0.026 sec на домашнем компьютере

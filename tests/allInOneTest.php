@@ -578,6 +578,15 @@ where user={user}',
 
     }
 
+    function testTranslit(){
+        $number = 101;
+        $this->assertEquals(
+            '{number} baran{||a|ov} na pole',
+            tpl::translit('{number} баран{||а|ов} на поле', [
+                'number' => $number])
+        );
+    }
+
 }
 
 

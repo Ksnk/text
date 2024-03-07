@@ -18,13 +18,13 @@ class Model_tpl
     {
         $this->_prop();
         $timemod = function ($data, $mod_ext, $spaces, $key, $mod) {
-            if(!is_numeric($data) && ($x = strtotime($data)) > 0) $data = $x;
+            if (!is_numeric($data) && ($x = strtotime($data)) > 0) $data = $x;
             if (!empty($mod_ext))
                 $format = $mod_ext;
             else if ($mod == 't') {
                 $format = 'j F Y г. в H:i';
             } else {
-                if(empty($data)) $data=0;
+                if (empty($data)) $data = 0;
                 if (date('Y') == date('Y', $data)) {
                     $format = 'j F';
                 } else {
@@ -37,17 +37,17 @@ class Model_tpl
         $this->implement_text_Modificator('q', function ($data, $mod_ext, $spaces, $key, $mod) {
             if (is_null($data) || '' === $data)
                 return "''";
-            return "'".$spaces . preg_replace(
-                    ["/'/",  '/\r/'],
-                    ["\\'",  ''],$data)."'";
+            return "'" . $spaces . preg_replace(
+                    ["/'/", '/\r/'],
+                    ["\\'", ''], $data) . "'";
         });
         // double quote
         $this->implement_text_Modificator('qq', function ($data, $mod_ext, $spaces, $key, $mod) {
             if (is_null($data) || '' === $data)
                 return '""';
-            return '"'.$spaces . preg_replace(
+            return '"' . $spaces . preg_replace(
                     ['/"/', '/\n/', '/\r/'],
-                    ['\\"', ' ', ''],$data).'"';
+                    ['\\"', ' ', ''], $data) . '"';
         });
         $this->implement_text_Modificator('d', $timemod);
         $this->implement_text_Modificator('t', $timemod);
@@ -234,8 +234,8 @@ class Model_tpl
      */
     public function rusd($daystr = null, $format = "j F, Y г.")
     {
-        if (!!$daystr ) {
-            if(!is_numeric($daystr) && ($x = strtotime($daystr)) > 0) $daystr = $x;
+        if (!!$daystr) {
+            if (!is_numeric($daystr) && ($x = strtotime($daystr)) > 0) $daystr = $x;
         } else
             $daystr = time();
         $replace = array(
@@ -281,7 +281,7 @@ class Model_tpl
             'sat' => 'сбт',
             'sun' => 'вск',
         );
-        return str_ireplace(array_keys($replace),array_values($replace),date($format, $daystr));
+        return str_ireplace(array_keys($replace), array_values($replace), date($format, $daystr));
     }
 
     /**
@@ -316,7 +316,7 @@ class Model_tpl
      */
     private function a2reg(&$a)
     {
-        static $cache=[];
+        static $cache = [];
         $key = count($a);
         foreach ($a as $k => $v) {
             if ($v != 'escaped')
@@ -355,7 +355,7 @@ class Model_tpl
         return $this->_($sql, $param, 'utext');
     }
 
-    static function translit($text)
+    public function translit($text)
     {
         $ar_latin = array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
             'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
@@ -471,7 +471,7 @@ class Model_tpl
                 array_shift($x);
                 $mod_ext = join('|', $x);
             }
-            return $this->modifyIt($mod, $key, $last, $data, $mod_ext, $spaces,$quote);// $spaces . $data;
+            return $this->modifyIt($mod, $key, $last, $data, $mod_ext, $spaces, $quote);// $spaces . $data;
         };
 
         // лексемы
@@ -503,27 +503,30 @@ class Model_tpl
             $key = trim($key);
             if (property_exists($param, $key)) $data = $param->{$key};
             else {
-                $k=trim($key).'=';$stack=[];$evaled=false;$op='';
-                while(!empty($k) && preg_match('/^(.*?)\s*([<>=]+)\s*(.*)$/',$k,$m)){
-                    if (property_exists($param, $m[1])) $stack[]= $param->{$m[1]};
-                    else $stack[]=$m[1];
-                    if(!empty($op)) {
-                        $evaled=true;
-                        $b=array_pop($stack);
-                        $a=array_pop($stack);
-                        if($op=='<'){
-                            $stack[]=$a<$b;
-                        } else if($op=='>'){
-                            $stack[]=$a>$b;
-                        } else if($op=='='){
-                            $stack[]=$a==$b;
+                $k = trim($key) . '=';
+                $stack = [];
+                $evaled = false;
+                $op = '';
+                while (!empty($k) && preg_match('/^(.*?)\s*([<>=]+)\s*(.*)$/', $k, $m)) {
+                    if (property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
+                    else $stack[] = $m[1];
+                    if (!empty($op)) {
+                        $evaled = true;
+                        $b = array_pop($stack);
+                        $a = array_pop($stack);
+                        if ($op == '<') {
+                            $stack[] = $a < $b;
+                        } else if ($op == '>') {
+                            $stack[] = $a > $b;
+                        } else if ($op == '=') {
+                            $stack[] = $a == $b;
                         }
                     }
-                    $op=$m[2];
-                    $k=trim($m[3]);
+                    $op = $m[2];
+                    $k = trim($m[3]);
                 }
-                if($evaled && $op=='=' && count($stack)==1){
-                    $data =array_pop($stack);
+                if ($evaled && $op == '=' && count($stack) == 1) {
+                    $data = array_pop($stack);
                 }
             }
             $mod = '';
