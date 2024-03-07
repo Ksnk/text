@@ -514,6 +514,14 @@ where user={user}',
             tpl::xxx()
         );
     }
+    function test_quotes()
+    {
+        $data = [
+            'index' => "Сейчас {{ hour|q}} уже {{ночь|qq}}",
+        ];
+        $data['data']['hour'] = '0';
+        $this->_test_tpl($data, "Сейчас ' 0' уже \"\"");
+    }
 
     function test_Benchmark()
     {
