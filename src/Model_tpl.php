@@ -18,7 +18,7 @@ class Model_tpl
     {
         $this->_prop();
         $timemod = function ($data, $mod_ext, $spaces, $key, $mod) {
-            if (($x = strtotime($data)) > 0) $data = $x;
+            if(!is_numeric($data) && ($x = strtotime($data)) > 0) $data = $x;
             if (!empty($mod_ext))
                 $format = $mod_ext;
             else if ($mod == 't') {
@@ -33,6 +33,22 @@ class Model_tpl
             }
             return $spaces . $this->rusd($data, $format);
         };
+        // single quote
+        $this->implement_text_Modificator('q', function ($data, $mod_ext, $spaces, $key, $mod) {
+            if (is_null($data) || '' === $data)
+                return "''";
+            return "'".$spaces . preg_replace(
+                    ["/'/",  '/\r/'],
+                    ["\\'",  ''],$data)."'";
+        });
+        // double quote
+        $this->implement_text_Modificator('qq', function ($data, $mod_ext, $spaces, $key, $mod) {
+            if (is_null($data) || '' === $data)
+                return "''";
+            return '"'.$spaces . preg_replace(
+                    ['/"/', '/\n/', '/\r/'],
+                    ['\\"', ' ', ''],$data).'"';
+        });
         $this->implement_text_Modificator('d', $timemod);
         $this->implement_text_Modificator('t', $timemod);
         $this->implement_text_Modificator('e', function ($data, $mod_ext, $spaces, $key, $mod) {
@@ -60,25 +76,6 @@ class Model_tpl
             if (!empty($m[4])) return 1024 * 1024 * 1024 * $m[1];
         }
         return 1 * $str;
-    }
-
-    /**
-     *  Замена стандартного транслита. Отличается потенциальной обратимостью.
-     */
-    static function translit($text)
-    {
-        $ar_latin = array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
-            'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
-            '', 'y', '', 'je', 'ju', 'ja', 'je', 'i');
-        $text = trim(str_replace(array('а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
-            'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ',
-            'ъ', 'ы', 'ь', 'э', 'ю', 'я', 'є', 'ї'),
-            $ar_latin, $text));
-        $text = trim(str_replace(array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
-                'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
-                'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'Є', 'Ї')
-            , $ar_latin, $text));
-        return $text;
     }
 
     /**
@@ -210,13 +207,13 @@ class Model_tpl
         for ($i = strlen($rub) - 1; $i >= 0; $i--) {
             $trio = $rub[$i] . $trio;
             if (strlen($trio) == 3) {
-                array_unshift($res, $this->numd(intval($trio), $p, $i == 0));
+                array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
                 $p = $this->thau[$idx++];
                 $trio = '';
             }
         }
         if ($trio !== '') {
-            array_unshift($res, $this->numd(intval($trio), $p, $i <= 0));
+            array_unshift($res, $this->numd(intval($trio), $p, $idx == 0));
         }
         $res = implode(' ', $res);
         if (isset($podpis[1])) {
@@ -237,8 +234,8 @@ class Model_tpl
      */
     public function rusd($daystr = null, $format = "j F, Y г.")
     {
-        if (!!$daystr) {
-            if (($x = strtotime($daystr)) > 0) $daystr = $x;
+        if (!!$daystr ) {
+            if(!is_numeric($daystr) && ($x = strtotime($daystr)) > 0) $daystr = $x;
         } else
             $daystr = time();
         $replace = array(
@@ -356,6 +353,22 @@ class Model_tpl
     public function utext($sql, $param)
     {
         return $this->_($sql, $param, 'utext');
+    }
+
+    static function translit($text)
+    {
+        $ar_latin = array('a', 'b', 'v', 'g', 'd', 'e', 'jo', 'zh', 'z', 'i', 'j', 'k',
+            'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'f', 'h', 'c', 'ch', 'sh', 'shh',
+            '', 'y', '', 'je', 'ju', 'ja', 'je', 'i');
+        $text = trim(str_replace(array('а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
+            'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ',
+            'ъ', 'ы', 'ь', 'э', 'ю', 'я', 'є', 'ї'),
+            $ar_latin, $text));
+        $text = trim(str_replace(array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
+                'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ',
+                'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'Є', 'Ї')
+            , $ar_latin, $text));
+        return $text;
     }
 
     /**
