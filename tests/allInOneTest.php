@@ -587,6 +587,13 @@ where user={user}',
         );
     }
 
+    function testKMG(){
+        $this->assertEquals(
+            268435456,
+            tpl::parseKMG('.25Г')
+        );
+    }
+
 }
 
 
