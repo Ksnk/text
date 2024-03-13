@@ -578,6 +578,22 @@ where user={user}',
 
     }
 
+    function testTranslit(){
+        $number = 101;
+        $this->assertEquals(
+            '{number} baran{||a|ov} na pole',
+            tpl::translit('{number} баран{||а|ов} на поле', [
+                'number' => $number])
+        );
+    }
+
+    function testKMG(){
+        $this->assertEquals(
+            268435456,
+            tpl::parseKMG('.25Г')
+        );
+    }
+
 }
 
 
