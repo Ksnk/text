@@ -509,8 +509,12 @@ class Model_tpl
                 $evaled = false;
                 $op = '';
                 while (!empty($k) && preg_match('/^(.*?)\s*([\.<>=]+)\s*(.*)$/', $k, $m)) {
-                    if (property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
-                    else  if (property_exists($param, strtolower($m[1]))) $stack[] = $param->{strtolower($m[1])};
+                    if(isset($m[2]) && $m[2]=='.') {
+                        // вырезка из массива вглубь
+
+                    }
+                    if ($op!='.' && property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
+                    else  if ($op!='.' && property_exists($param, strtolower($m[1]))) $stack[] = $param->{strtolower($m[1])};
                     else $stack[] = $m[1];
                     if (!empty($op)) {
                         $evaled = true;

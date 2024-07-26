@@ -35,9 +35,25 @@ class allInOneTest extends TestCase
 
     function testdeep(){
         $tpl='{EXTRA.COLOR? style="color\:{EXTRA.COLOR};"}';
-        $data=['EXTRA'=>['COLOR'=>'#eee']];
+        $data=json_decode('{
+    "ID": "377",
+    "ENTITY_ID": "STATUS",
+    "STATUS_ID": "UC_5T75BS",
+    "NAME": "ВЗЯТО В ДП КАДИС",
+    "NAME_INIT": "",
+    "SORT": "20",
+    "SYSTEM": "N",
+    "CATEGORY_ID": "0",
+    "COLOR": "#10e5fc",
+    "SEMANTICS": null,
+    "EXTRA": {
+        "SEMANTICS": "process",
+        "COLOR": "#10e5fc"
+    }
+}',JSON_OBJECT_AS_ARRAY);
+        //$data=['EXTRA'=>['COLOR'=>'#eee']];
         $this->assertEquals(
-            ' style="color:#eee;"',
+            ' style="color:#10e5fc;"',
             tpl::text($tpl,$data)
         );
     }
