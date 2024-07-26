@@ -502,6 +502,7 @@ class Model_tpl
             } while (true);
             $key = trim($key);
             if (property_exists($param, $key)) $data = $param->{$key};
+            elseif (property_exists($param, strtolower($key))) $data = $param->{strtolower($key)};
             else {
                 $k = trim($key) . '=';
                 $stack = [];
@@ -509,6 +510,7 @@ class Model_tpl
                 $op = '';
                 while (!empty($k) && preg_match('/^(.*?)\s*([\.<>=]+)\s*(.*)$/', $k, $m)) {
                     if (property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
+                    else  if (property_exists($param, strtolower($m[1]))) $stack[] = $param->{strtolower($m[1])};
                     else $stack[] = $m[1];
                     if (!empty($op)) {
                         $evaled = true;

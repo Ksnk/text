@@ -36,7 +36,7 @@ class Model_sql extends Model_tpl
             return $spaces . '"' . $pref . addCslashes($data, '"\%_') . $suf . '"';
         });
         $timemod = function ($data, $mod_ext, $spaces, $key, $mod, $q) {
-            if (($x = strtotime($data)) > 0) $data = $x;
+            if (!is_numeric($data) && ($x = strtotime($data)) > 0) $data = $x;
             $format = 'Y-m-d H:i:s';
             return $spaces . $q(date($format,$data));
         };
