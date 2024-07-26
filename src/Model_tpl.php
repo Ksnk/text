@@ -507,14 +507,21 @@ class Model_tpl
                 $stack = [];
                 $evaled = false;
                 $op = '';
-                while (!empty($k) && preg_match('/^(.*?)\s*([<>=]+)\s*(.*)$/', $k, $m)) {
+                while (!empty($k) && preg_match('/^(.*?)\s*([\.<>=]+)\s*(.*)$/', $k, $m)) {
                     if (property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
                     else $stack[] = $m[1];
                     if (!empty($op)) {
                         $evaled = true;
                         $b = array_pop($stack);
                         $a = array_pop($stack);
-                        if ($op == '<') {
+                        if ($op == '.') {
+                            if(is_array($a) && array_key_exists($b,$a))
+                                $stack[] = $a[$b];
+                            else if(is_object($a) && property_exists($a,$b))
+                                $stack[] = $a->{$b};
+                            else
+                                $stack[] = '';
+                        } elseif ($op == '<') {
                             $stack[] = $a < $b;
                         } else if ($op == '>') {
                             $stack[] = $a > $b;

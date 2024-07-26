@@ -4,7 +4,7 @@
 include_once '../vendor/autoload.php';
 
 use PHPUnit\Framework\TestCase;
-use Ksnk\text\tpl, Ksnk\text\Model_tpl, Ksnk\text\Model_sql;
+use Ksnk\text\tpl, Ksnk\text\Model_sql;
 
 error_reporting(E_STRICT | E_ALL | E_NOTICE | E_CORE_WARNING | E_USER_NOTICE | E_USER_WARNING);
 
@@ -32,6 +32,16 @@ class allInOneTest extends TestCase
             throw new Exception('wrong parameters');
         }
     }
+
+    function testdeep(){
+        $tpl='{EXTRA.COLOR? style="color\:{EXTRA.COLOR};"}';
+        $data=['EXTRA'=>['COLOR'=>'#eee']];
+        $this->assertEquals(
+            ' style="color:#eee;"',
+            tpl::text($tpl,$data)
+        );
+    }
+
 
     function test_to_debug()
     {
