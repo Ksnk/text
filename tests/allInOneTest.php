@@ -58,6 +58,14 @@ class allInOneTest extends TestCase
         );
     }
 
+    function test_0001(){
+        $data=['POINT'=>'111', 'CURRENT.POINT'=>'22', 'CURRENT'=>['diff'=>444,'POINT'=>333]];
+        $tpl='{POINT}{ CURRENT.POINT}{ CURRENT.diff}';
+        $this->assertEquals(
+            '111 22 444',
+            tpl::text($tpl,$data)
+        );
+    }
 
     function test_to_debug()
     {
