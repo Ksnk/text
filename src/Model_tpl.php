@@ -453,6 +453,20 @@ class Model_tpl
             return $lex;
         };
 
+        $getval = function($o,$disp, $default=''){
+            if(empty($disp)) return $default;
+            if (is_array($o) && array_key_exists($disp, $o))
+                return  $o[$disp];
+            else if (is_object($o) && property_exists($o, $disp))
+                return  $o->{$disp};
+            else if (is_object($o) && property_exists($o, strtolower($disp)))
+                return  $o->{strtolower($disp)};
+            else if (is_object($o) && is_a($o, 'ArrayAccess'))
+                return  $o[$disp];
+            else
+                return $default;
+        };
+
         $repl = function ($spaces, $data, $key, $quote, $mod = '') use (&$last, &$param) {
             // замена
             if (is_array($data) || is_object($data)) {
@@ -476,7 +490,7 @@ class Model_tpl
 
         // лексемы
         $last = '';
-        $getopen = function () use (&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl) {
+        $getopen = function () use (&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl, $getval) {
             // первый элемент либо условие, либо замена
             $x = ['?' => 'cond', '|' => 'mod'];
             $x[$this->tags[1]] = 'close';
@@ -501,29 +515,23 @@ class Model_tpl
                 $next = array_shift($lex);
             } while (true);
             $key = trim($key);
-            if (property_exists($param, $key)) $data = $param->{$key};
-            elseif (property_exists($param, strtolower($key))) $data = $param->{strtolower($key)};
-            else {
+            $data=$getval($param, $key, null);
+            if(!empty($key) && is_null($data)) {
                 $k = trim($key) . '=';
                 $stack = [];
                 $evaled = false;
                 $op = '';
                 while (!empty($k) && preg_match('/^(.*?)\s*([\.<>=]+)\s*(.*)$/', $k, $m)) {
-                    if ($op != '.' && property_exists($param, $m[1])) $stack[] = $param->{$m[1]};
-                    else if ($op != '.' && property_exists($param, strtolower($m[1]))) $stack[] = $param->{strtolower($m[1])};
-                    else $stack[] = $m[1];
-                    if (!empty($op)) {
+                    if (!empty($op) && $op=='.') {
+                        $evaled = true;
+                        $b = array_pop($stack);
+                        $stack[] = $getval($b,$m[1], $m[1]);
+                    } else if (!empty($m[1])) $stack[] = $getval($param,$m[1], $m[1]);
+                    if (!empty($op) && $op!=='.') {
                         $evaled = true;
                         $b = array_pop($stack);
                         $a = array_pop($stack);
-                        if ($op == '.') {
-                            if (is_array($a) && array_key_exists($b, $a))
-                                $stack[] = $a[$b];
-                            else if (is_object($a) && property_exists($a, $b))
-                                $stack[] = $a->{$b};
-                            else
-                                $stack[] = '';
-                        } elseif ($op == '<') {
+                        if ($op == '<') {
                             $stack[] = $a < $b;
                         } else if ($op == '>') {
                             $stack[] = $a > $b;
@@ -621,3 +629,8 @@ class Model_tpl
     }
 
 }
+/*
+ * Хотелка - реализация ArrayAccess
+ *
+ *
+ */

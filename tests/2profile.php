@@ -25,6 +25,9 @@ echo    tpl::text('Всего строк - {total}'.
         , $stat);
 
 
+
+
+
 $pattern='{one}{two}{three}{four}';
 $data=[
     'one'=>1,
@@ -40,3 +43,5 @@ for($i=0;$i<1000;$i++){
 $fin=microtime(true);
 printf("%.03f sec ",$fin-$divide);
 //1000 - 0.026 sec на домашнем компьютере
+
+

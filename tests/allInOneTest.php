@@ -11,28 +11,6 @@ error_reporting(E_STRICT | E_ALL | E_NOTICE | E_CORE_WARNING | E_USER_NOTICE | E
 class allInOneTest extends TestCase
 {
 
-    /**
-     * вспомогательная функция - utext
-     * @param $d
-     * @param string $pattern
-     * @throws Exception
-     */
-    private function _test_tpl(&$d, $pattern = '')
-    {
-        if (!isset($d['data'])) $d['data'] = [];
-        if (isset($d['index'])) {
-            $result = tpl::utext($d['index'], $d['data']);
-        }
-        if (!empty($pattern)) {
-            $d['pattern'] = $pattern;
-        }
-        if (!empty($d['pattern'])) {
-            $this->assertEquals($d['pattern'], $result);
-        } else {
-            throw new Exception('wrong parameters');
-        }
-    }
-
     function testdeep(){
         $tpl='{EXTRA.COLOR? style="color\:{EXTRA.COLOR};"}';
         $data=json_decode('{
@@ -56,6 +34,41 @@ class allInOneTest extends TestCase
             ' style="color:#10e5fc;"',
             tpl::text($tpl,$data)
         );
+    }
+
+    function testArrayAccessible(){
+        $array = new ArrayAccessable(array('a', 'b', 'c', 'd', 'number' => 101));
+
+ /*       $this->assertEquals(
+            tpl::text('{number} baran{||a|ov} na pole', ['number'=>101]),
+            '101 baran na pole'
+        );*/
+        $this->assertEquals(
+            tpl::text('{number} baran{||a|ov} na pole', $array),
+            '101 baran na pole'
+        );
+     }
+
+    /**
+     * вспомогательная функция - utext
+     * @param $d
+     * @param string $pattern
+     * @throws Exception
+     */
+    private function _test_tpl(&$d, $pattern = '')
+    {
+        if (!isset($d['data'])) $d['data'] = [];
+        if (isset($d['index'])) {
+            $result = tpl::utext($d['index'], $d['data']);
+        }
+        if (!empty($pattern)) {
+            $d['pattern'] = $pattern;
+        }
+        if (!empty($d['pattern'])) {
+            $this->assertEquals($d['pattern'], $result);
+        } else {
+            throw new Exception('wrong parameters');
+        }
     }
 
     function test_0001(){
@@ -628,6 +641,7 @@ where user={user}',
         );
     }
 
+
 }
 
 
@@ -639,5 +653,41 @@ class ChildTpl extends Model_sql
         return 'xxx';
     }
 
+}
+
+class ArrayAccessable implements ArrayAccess
+{
+    protected $_container = array();
+
+    public function __construct($array = null)
+    {
+        if (!is_null($array)) {
+            $this->_container = $array;
+        }
+    }
+
+    public function offsetExists(mixed $offset): bool
+    {
+        return isset($this->_container[$offset]);
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->offsetExists($offset) ? $this->_container[$offset] : null;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        if (is_null($offset)) {
+            $this->_container[] = $value;
+        } else {
+            $this->_container[$offset] = $value;
+        }
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+        unset($this->_container[$offset]);
+    }
 }
 
