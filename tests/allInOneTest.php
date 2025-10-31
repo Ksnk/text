@@ -231,6 +231,15 @@ where user={user}',
             tpl::text('{prop} на поле', [
                 'prop' => tpl::prop($number, "баран||а|ов")])
         );
+        // проверка склонения в женском роде одна-две вместо один-два
+        $number = 101;
+        $_data=['src'=>'54167', 'was'=>'111', 'glue'=>'56591'];
+        $this->assertEquals(
+            'сто один баран на поле',
+            tpl::text('lead_недоклеили {glue?<a href="https\://kadis2020.bitrix24.ru/crm/lead/details/{glue}/">{glue}</a>:``} '.
+                '{src?<a href="https\://kadis2020.bitrix24.ru/crm/lead/details/{src}/">{src}</a>:``} '.
+                '--{was}', $_data)
+        );
         $number = 101;
         $this->assertEquals(
             '101 баран на поле',

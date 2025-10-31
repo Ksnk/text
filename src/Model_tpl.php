@@ -453,8 +453,12 @@ class Model_tpl
             return $lex;
         };
 
-        $getval = function($o,$disp, $default=''){
+        $yes_its_default=false;
+
+        $getval = function($o,$disp, $default='')use(&$yes_its_default){
+            $yes_its_default = true;
             if(empty($disp)) return $default;
+            $yes_its_default = false;
             if (is_array($o) && array_key_exists($disp, $o))
                 return  $o[$disp];
             else if (is_object($o) && property_exists($o, $disp))
@@ -463,8 +467,10 @@ class Model_tpl
                 return  $o->{strtolower($disp)};
             else if (is_object($o) && is_a($o, 'ArrayAccess'))
                 return  $o[$disp];
-            else
+            else {
+                $yes_its_default = true;
                 return $default;
+            }
         };
 
         $repl = function ($spaces, $data, $key, $quote, $mod = '') use (&$last, &$param) {
@@ -490,7 +496,7 @@ class Model_tpl
 
         // лексемы
         $last = '';
-        $getopen = function () use (&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl, $getval) {
+        $getopen = function () use (&$yes_its_default,&$eatnext, &$getopen, &$getplain, &$param, &$last, $quote, $type, $repl, $getval) {
             // первый элемент либо условие, либо замена
             $x = ['?' => 'cond', '|' => 'mod'];
             $x[$this->tags[1]] = 'close';
@@ -516,7 +522,7 @@ class Model_tpl
             } while (true);
             $key = trim($key);
             $data=$getval($param, $key, null);
-            if(!empty($key) && is_null($data)) {
+            if(!empty($key) & $yes_its_default) {
                 $k = trim($key) . '=';
                 $stack = [];
                 $evaled = false;
