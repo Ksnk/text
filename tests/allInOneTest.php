@@ -235,7 +235,7 @@ where user={user}',
         $number = 101;
         $_data=['src'=>'54167', 'was'=>'111', 'glue'=>'56591'];
         $this->assertEquals(
-            'сто один баран на поле',
+            'lead_недоклеили <a href="https://kadis2020.bitrix24.ru/crm/lead/details/56591/">56591</a> <a href="https://kadis2020.bitrix24.ru/crm/lead/details/54167/">54167</a> --111',
             tpl::text('lead_недоклеили {glue?<a href="https\://kadis2020.bitrix24.ru/crm/lead/details/{glue}/">{glue}</a>:``} '.
                 '{src?<a href="https\://kadis2020.bitrix24.ru/crm/lead/details/{src}/">{src}</a>:``} '.
                 '--{was}', $_data)

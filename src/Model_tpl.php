@@ -31,6 +31,8 @@ class Model_tpl
                     $format = 'j F Y г';
                 }
             }
+            if($mod == 'dd')
+                return $spaces . $this->rusd($data, $format, true);
             return $spaces . $this->rusd($data, $format);
         };
         // single quote
@@ -49,6 +51,7 @@ class Model_tpl
                     ['/"/', '/\n/', '/\r/'],
                     ['\\"', ' ', ''], $data) . '"';
         });
+        $this->implement_text_Modificator('dd', $timemod);
         $this->implement_text_Modificator('d', $timemod);
         $this->implement_text_Modificator('t', $timemod);
         $this->implement_text_Modificator('e', function ($data, $mod_ext, $spaces, $key, $mod) {
@@ -232,7 +235,7 @@ class Model_tpl
      * @param string $format
      * @return mixed
      */
-    public function rusd($daystr = null, $format = "j F, Y г.")
+    public function rusd($daystr = null, $format = "j F, Y г.", $latin=false)
     {
         if (!!$daystr) {
             if (!is_numeric($daystr) && ($x = strtotime($daystr)) > 0) $daystr = $x;
@@ -281,6 +284,9 @@ class Model_tpl
             'sat' => 'сбт',
             'sun' => 'вск',
         );
+        if($latin)
+            return date($format, $daystr);
+        else
         return str_ireplace(array_keys($replace), array_values($replace), date($format, $daystr));
     }
 
